@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+ 
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>彩色图像的直方图计算</title>
+    <style>
+        h1 {
+            text-align: center;
+        }
+ 
+        p {
+            float: right;
+        }
+ 
+        #myCanvas {
+            display: block;
+            margin: 0 auto;
+        }
+ 
+        .container {
+            display: flex;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+ 
+        @media screen and (min-width:300px) {
+            .echart-box {
+                width: 100%;
+                height: 500px;
+            }
+        }
+ 
+        @media screen and (min-width:768px) {
+            .echart-box {
+                width: 45%;
+                height: 500px;
+            }
+        }
+ 
+        @media screen and (min-width:1024px) {
+            .echart-box {
+                width: 30%;
+                height: 500px;
+            }
+        }
+    </style>
+</head>
+ 
+<body>
+    <div>
+        <h1>彩色图像的直方图计算</h1>
+        <p>假如皮卡会coding</p>
+        <input type="file" id="imageInput" /><br>
+        直方图区间数：
+        <input type="number" id="numInput" value="64"> （x>0&&x<=256） </div> <canvas id="myCanvas" width="600"
+            height="600"></canvas>
+            <div class="container">
+                <div class="echart-box" id="rchart"></div>
+                <div class="echart-box" id="gchart"></div>
+                <div class="echart-box" id="bchart"></div>
+            </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.3.1/dist/echarts.min.js"></script>
+    <script src="./js/calculateColor.js"></script>
+</body>
+ 
+</html>
