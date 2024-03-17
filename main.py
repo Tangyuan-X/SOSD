@@ -25,13 +25,25 @@ from BlenderImageAndShadow import HandleResult
 with open('config.json', 'r') as f:
     config = json.load(f)
 
-def load_obj_paths(store_path):
-    with open(store_path, 'rb') as f:
-        return pickle.load(f)
-print('111',config['google_research_url'])
+def load_obj_paths():
+    # 缓存ibj文件夹路径
+    if not os.path.exists('obj_paths.pkl'):
+        objList = list(obj_root.glob('**/*.obj'))
+        print(objList)
+        with open('obj_paths.pkl', 'wb') as f:
+            pickle.dump(objList, f)
+    else:
+        with open('obj_paths.pkl', 'rb') as f:
+            objList = pickle.load(f)
+    return objList
+
+
+
+
+
 # obj文件夹路径
 obj_root = pathlib.Path(config['google_research_url'])
-objList = load_obj_paths('obj_paths.pkl')
+objList = load_obj_paths()
 
 # 删除某一集合中的所有物体
 def remove_all_objects_from_collection(collection):
