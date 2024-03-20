@@ -9,29 +9,31 @@ import pathlib
 import math
 import sys
 import json
-# 获取 main.py 的绝对路径
-current_dir = os.path.dirname(os.path.abspath(__file__))
 
-# 构建 myutils 文件夹的路径
-myutils_path = os.path.join(current_dir, 'myutils')
+# 获取 main.py 的目录
+current_dir = os.path.dirname(os.path.dirname(__file__))
+print("current dir: "+current_dir)
+sys.path.append(current_dir+"\\myutils")
 
-# 将 myutils 文件夹的路径添加到系统路径中
-sys.path.append(myutils_path)
-
-# 导入模块
 from BlenderImageAndShadow import HandleResult
 
-# 导入json配置
-with open('config.json', 'r') as f:
-    config = json.load(f)
+####################################################################################
+# 函数定义
+####################################################################################
 
-def load_obj_paths(store_path):
-    with open(store_path, 'rb') as f:
-        return pickle.load(f)
-print('111',config['google_research_url'])
-# obj文件夹路径
-obj_root = pathlib.Path(config['google_research_url'])
-objList = load_obj_paths('obj_paths.pkl')
+# 读取模型目录
+def load_obj_paths(obj_root):
+    # 缓存obj文件夹路径
+    if not os.path.exists(current_dir+'\\obj_paths.pkl'):
+        objList = list(obj_root.glob('**/*.obj'))
+        print(objList)
+        with open(current_dir+'\\obj_paths.pkl', 'wb') as f:
+            pickle.dump(objList, f)
+    else:
+        with open(current_dir+'\\obj_paths.pkl', 'rb') as f:
+            objList = pickle.load(f)
+    return objList
+
 
 # 删除某一集合中的所有物体
 def remove_all_objects_from_collection(collection):
@@ -40,6 +42,8 @@ def remove_all_objects_from_collection(collection):
         # 删除物体
         bpy.data.objects.remove(obj, do_unlink=True)
 
+
+# 模型按最大比例缩放
 def set_obj_scale_to_max_size(obj, max_size=1.0):
     # 获取物体边界框的尺寸
     dimensions = obj.dimensions
@@ -50,6 +54,8 @@ def set_obj_scale_to_max_size(obj, max_size=1.0):
     # 设置物体的缩放
     obj.scale = (scale_factor, scale_factor, scale_factor)
 
+
+# 随机选择3-5个模型
 def random3_5items(objList):
     objNum = random.randint(3, 5)
     eachX = 3 / objNum
@@ -76,6 +82,8 @@ def random3_5items(objList):
         # bpy.data.collections['items'].objects.link(obj)
     addRenderFrame()
     return objNum
+
+
 # 修改地面纹理
 def change_ground_texture():
     # 设置纹理文件夹路径
@@ -127,11 +135,16 @@ def change_ground_texture():
     material.node_tree.links.new(principled_bsdf_node.inputs['Base Color'], texture_node.outputs['Color'])
 
     print(f"Base color of material '{material.name}' of object 'ground' has been updated with '{selected_file}'")
+
+
+# 随机设置相机位置
 def randomCamera():
     # 随机选择Camera，Camera1，Camera2中的一个相机
     camera = random.choice([bpy.data.objects['Camera'], bpy.data.objects['Camera1'], bpy.data.objects['Camera2']])
     bpy.context.scene.camera = camera
 
+
+# 随机设置灯光
 def changeLight():
     # 选中名为"left"的灯光
     light = bpy.data.objects['left']
@@ -139,6 +152,7 @@ def changeLight():
     light.data.energy = random.uniform(200, 400)
 
     light.location = random.uniform(-4.5, 1.5), random.uniform(-2.5, 2.5), random.uniform(0.5, 5)
+
 
 # 制作渲染帧，使得可以获得每个物体的阴影
 def addRenderFrame():
@@ -204,28 +218,32 @@ def addRenderFrame():
         obj.keyframe_insert(data_path="visible_shadow", frame=i + 5)
         i += 4
     bpy.context.scene.frame_end = i
-# 清除items集合中的所有物体
-remove_all_objects_from_collection(bpy.data.collections['items'])
-# 随机生成3-5个物体
-objNum = random3_5items(objList)
-# 随机修改ground材质
-change_ground_texture()
-randomCamera()
-changeLight()
-
-
+    
+    
 # 渲染动画
 def render_animation():
     # 渲染动画
-    bpy.ops.render.render(animation=True)
+    bpy.ops.render.render(animation=True)    
 
 
-# 清除items集合中的所有物体
-# 获取脚本所在的目录路径
-script_directory = os.path.dirname(os.path.abspath(__file__))
-print(script_directory)
+####################################################################################
+# 程序开始
+####################################################################################
+
+
+# 导入json配置
+with open(current_dir+'\\config.json', 'r') as f:
+    config = json.load(f)
+    
+print('Google Scanned Objects dir:',config['google_research_url'])
+# obj文件夹路径
+obj_root = pathlib.Path(config['google_research_url'])
+objList = load_obj_paths(obj_root)
+
+randomCamera()
+
 # 切换当前工作目录到脚本所在的目录
-os.chdir(script_directory)
+os.chdir(current_dir)
 
 times = 10
 # baseUrl
@@ -236,10 +254,11 @@ for i in range(times):
     # 获得时间戳
     now = int(time.time())
     outputUrl1 = outputUrl + '\\' + str(now)
+    print('baseUrl and outputUrl1:',baseUrl, outputUrl1)
     remove_all_objects_from_collection(bpy.data.collections['items'])
     # 随机生成3-5个物体
     random3_5items(objList)
-    # 随机修改ground材质
+    # 随机修改ground材质、光源
     change_ground_texture()
     changeLight()
     # 保存.blend文件
@@ -248,5 +267,4 @@ for i in range(times):
     bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+'.blend')
     # 渲染动画
     render_animation()
-    print('222',baseUrl, outputUrl1)
     HandleResult(baseUrl, outputUrl1)

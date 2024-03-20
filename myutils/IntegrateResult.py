@@ -6,8 +6,9 @@ import PIL
 def integrateResult(file_path):
     # 将路径中所有f'IndexObjxxxxx.png'的图片合并成一张图片
     # 获取所有文件名，按照文件名排序
-    print("111111",file_path)
+    print("integrateResult file_path:",file_path)
     file_names = sorted(os.listdir(file_path))
+    print("file_names", file_names)
 
     # 获取所有IndexObj的文件名
     index_obj_file_names = [f for f in file_names if f.startswith('IndexObj')]
@@ -40,7 +41,7 @@ def integrateResult(file_path):
 
     # 将路径中所有f'shadowxxxxx.png'的图片合并成一张图片
     # 获取所有shadow的文件名
-    shadow_file_names = [f for f in file_names if f.startswith('shadow')]
+    shadow_file_names = [f for f in file_names if f.startswith('shadow_mask')]
     # 获取第一张图片
     first_shadow = PIL.Image.open(os.path.join(file_path, shadow_file_names[0]))
     # 获取图片的宽度和高度
@@ -62,15 +63,15 @@ def integrateResult(file_path):
         for i in range(shadow.width):
             for j in range(shadow.height):
                 r, g, b, a = pixels[i, j]
-                if r == 0 and g == 255 and b == 0 :
+                if r == 0 and g == 255 and b == 0:
                     pixels[i, j] = curColor
         # 将shadow图片粘贴到result图片上
         result.paste(shadow, (0, 0), shadow)
     # 保存结果
-    result.save(os.path.join(file_path, 'shadow.png'))
+    result.save(os.path.join(file_path, 'shadow_mask.png'))
 
     # 将shadow和result合并
     result = PIL.Image.open(os.path.join(file_path, 'result.png'))
-    shadow = PIL.Image.open(os.path.join(file_path, 'shadow.png'))
+    shadow = PIL.Image.open(os.path.join(file_path, 'shadow_mask.png'))
     result.paste(shadow, (0, 0), shadow)
-    result.save(os.path.join(file_path, 'object_shadow.png'))
+    result.save(os.path.join(file_path, 'object_shadow_mask.png'))

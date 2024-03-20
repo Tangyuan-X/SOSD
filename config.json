@@ -1,7 +1,6 @@
 {
-  "google_research_url" : "G:\\dataset\\Scanned Objects by Google Research",
-  "texture_folder" : "G:\\blender\\location\\texture_jpgs",
-  "outputUrl" : "G:\\blender\\output\\WALL2",
-  "baseUrl" : "G:\\blender\\output\\WALL2"
+  "google_research_url" : "D:\\Programming\\python\\SOSD\\ScannedObjects",
+  "texture_folder" : "D:\\Programming\\python\\SOSD\\texture_jpgs",
+  "outputUrl" : "D:\\Programming\\python\\SOSD\\output",
+  "baseUrl" : "D:\\Programming\\python\\SOSD\\output"
 }
-
