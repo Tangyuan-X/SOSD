@@ -75,3 +75,5 @@ def integrateResult(file_path):
     shadow = PIL.Image.open(os.path.join(file_path, 'shadow_mask.png'))
     result.paste(shadow, (0, 0), shadow)
     result.save(os.path.join(file_path, 'object_shadow_mask.png'))
+    
+    

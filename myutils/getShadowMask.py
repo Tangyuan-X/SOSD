@@ -16,7 +16,7 @@ def getShadowMask(foreground, index, outputUrl):
             # 获取当前像素的RGBA值
             r, g, b, a = pixels[i, j]
             # 的不变，其他变为透明
-            if (r > 200 and g < 100 and b < 100) or (a <= 3 and (r <= 2 and g <= 2 and b <= 2)):
+            if a <= 6 or (r > 2 and g > 2 and b > 2):
                 pixels[i, j] = (0, 0, 0, 0)
             # 其他变为绿色
             else:

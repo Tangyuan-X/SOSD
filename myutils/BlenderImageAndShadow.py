@@ -16,7 +16,7 @@ def HandleResult(baseUrl, outputUrl):
                   os.path.isfile(os.path.join(baseUrl, lists)) and os.path.join(baseUrl, lists).endswith('.png')])
     # 帧长度
     index = 2
-    frameLength = pngNum // 3 - 1
+    frameLength = pngNum//2-1
     print("###########frame length:", frameLength)
     while (index <= frameLength):
         # 打开背景图
@@ -25,9 +25,10 @@ def HandleResult(baseUrl, outputUrl):
         id_shadow = Image.open(baseUrl + f'\IndexObj{index + 1:04d}.png')
         id = gi.getIndexObj(id_shadow.copy(), index, outputUrl)
         # 打开阴影mask
-        shadow_mask = gsm.getShadowMask(id_shadow.copy(), index, outputUrl)
+        pure_shadow = Image.open(baseUrl + f'\Image{index + 4:04d}.png')
+        shadow_mask = gsm.getShadowMask(pure_shadow.copy(), index, outputUrl)
         # 获取阴影
-        realShadow = gs.getShadow(id_shadow.copy(), index, outputUrl)
+        realShadow = gs.getShadow(pure_shadow.copy(), index, outputUrl)
 
         # 确保上层图片和背景图片具有相同的尺寸
         id = id.resize(background.size)
@@ -42,7 +43,7 @@ def HandleResult(baseUrl, outputUrl):
         
         # 保存结果
         overlay.save(outputUrl + f'\\result{index:04d}.png')
-        index += 4
+        index += 6
         # 关闭图像
         background.close()
         shadow_mask.close()

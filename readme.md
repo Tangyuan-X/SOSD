@@ -11,8 +11,7 @@ blender -b ./locationTest1.blend -P ./main.py
 
 ## TODO
 
-1. blender导出的index mask无法完全包围住物体，边缘有问题。以及mask无法为255的纯红色
-2. blender导出的indexobj图片中，有各种噪点，导致最终生成的shadow_mask中会有噪点
-3. 每次运行后清除obj和材质，防止blend文件越来越大
-4. 随机生成的位置会穿模
-5. 考虑自阴影问题
+1. 考虑阴影交叉问题
+2. 每次运行后清除obj和材质，防止blend文件越来越大
+3. 随机生成的位置会穿模
+4. 考虑自阴影问题

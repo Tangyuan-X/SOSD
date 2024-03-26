@@ -162,12 +162,13 @@ def addRenderFrame():
     # 创建动画序列
     bpy.context.scene.render.fps = 1
     # 第0帧所有物体可见
-    for k, obj in enumerate(bpy.data.collections['items'].all_objects):
+    for obj in bpy.data.collections['items'].objects:
         obj.visible_camera = True
         obj.visible_shadow = True
         obj.visible_diffuse = False
         obj.visible_glossy = False
         obj.pass_index = 1
+        obj.is_holdout = False
         ground.is_shadow_catcher = False
         ground.keyframe_insert(data_path="is_shadow_catcher", frame=0)
         obj.keyframe_insert(data_path="visible_diffuse", frame=0)
@@ -175,8 +176,9 @@ def addRenderFrame():
         obj.keyframe_insert(data_path="pass_index", frame=0)
         obj.keyframe_insert(data_path="visible_camera", frame=0)
         obj.keyframe_insert(data_path="visible_shadow", frame=0)
+        obj.keyframe_insert(data_path="is_holdout", frame=0)
     # 第1帧所有物体不可见
-    for k, obj in enumerate(bpy.data.collections['items'].all_objects):
+    for obj in bpy.data.collections['items'].objects:
         obj.visible_camera = False
         obj.visible_shadow = False
         obj.pass_index = 0
@@ -184,39 +186,53 @@ def addRenderFrame():
         obj.keyframe_insert(data_path="visible_camera", frame=1)
         obj.keyframe_insert(data_path="visible_shadow", frame=1)
     # 循环items集合中的所有物体，每隔一秒可见一个物体
-    i = 1
-    for k, obj in enumerate(bpy.data.collections['items'].all_objects):
-        obj.visible_camera = False
-        obj.visible_shadow = False
-
-        obj.keyframe_insert(data_path="visible_camera", frame=i)
-        obj.keyframe_insert(data_path="visible_shadow", frame=i)
+    i = 2
+    for obj in bpy.data.collections['items'].objects:
         obj.pass_index = 1
-        obj.keyframe_insert(data_path="pass_index", frame=i+1)
+        obj.keyframe_insert(data_path="pass_index", frame=i)
         obj.visible_camera = True
         obj.visible_shadow = True
-        obj.keyframe_insert(data_path="visible_camera", frame=i + 1)
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 1)
+        obj.keyframe_insert(data_path="visible_camera", frame=i)
+        obj.keyframe_insert(data_path="visible_shadow", frame=i)
+        
         ground.is_shadow_catcher = True
-        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
+        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 1)
+        
         obj.visible_camera = False
         ground.is_shadow_catcher = False
-        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 3)
-        obj.keyframe_insert(data_path="visible_camera", frame=i + 3)
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 3)
+        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
+        obj.keyframe_insert(data_path="visible_camera", frame=i + 2)
+        obj.keyframe_insert(data_path="visible_shadow", frame=i + 2)
+        
         obj.visible_camera = True
         obj.visible_shadow = False
         obj.pass_index = 1
-        obj.keyframe_insert(data_path="pass_index", frame=i + 4)
-        obj.keyframe_insert(data_path="visible_camera", frame=i + 4)
+        obj.keyframe_insert(data_path="pass_index", frame=i + 3)
+        obj.keyframe_insert(data_path="visible_camera", frame=i + 3)
+        obj.keyframe_insert(data_path="visible_shadow", frame=i + 3)
+        
+        obj.is_holdout = True
+        obj.visible_shadow = True
+        ground.is_shadow_catcher = True
         obj.keyframe_insert(data_path="visible_shadow", frame=i + 4)
-        obj.visible_camera = False
-        obj.pass_index = 0
-
-        obj.keyframe_insert(data_path="pass_index", frame=i + 5)
-        obj.keyframe_insert(data_path="visible_camera", frame=i + 5)
+        obj.keyframe_insert(data_path="is_holdout", frame=i + 4)
+        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 4)
+        
+        obj.is_holdout = False
+        obj.visible_shadow = False
         obj.keyframe_insert(data_path="visible_shadow", frame=i + 5)
-        i += 4
+        obj.keyframe_insert(data_path="is_holdout", frame=i + 5)
+        
+        obj.visible_camera = False
+        obj.visible_shadow = False
+        obj.pass_index = 0
+        ground.is_shadow_catcher = False
+        obj.keyframe_insert(data_path="pass_index", frame=i + 6)
+        obj.keyframe_insert(data_path="visible_camera", frame=i + 6)
+        obj.keyframe_insert(data_path="visible_shadow", frame=i + 6)
+        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 6)
+        i += 6
+    i -= 1
     bpy.context.scene.frame_end = i
     
     
@@ -268,3 +284,4 @@ for i in range(times):
     # 渲染动画
     render_animation()
     HandleResult(baseUrl, outputUrl1)
+
