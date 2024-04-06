@@ -20,5 +20,5 @@ def getShadow(foreground, index, outputUrl):
 #                pixels[i, j] = (0, 0, 0, 0)
 #             其他不变
     # 保存结果
-    foreground.save(outputUrl + f'\\shadow{index:04d}.png')
+    foreground.save(outputUrl + f'\\shadow_soft_mask{index:04d}.png')
     return foreground

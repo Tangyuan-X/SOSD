@@ -43,6 +43,13 @@ def remove_all_objects_from_collection(collection):
         bpy.data.objects.remove(obj, do_unlink=True)
 
 
+def remove_all_materials():
+    for mat in bpy.data.materials:
+        if mat.name.endswith("floor"):
+            continue
+        bpy.data.materials.remove(mat)
+
+
 # 模型按最大比例缩放
 def set_obj_scale_to_max_size(obj, max_size=1.0):
     # 获取物体边界框的尺寸
@@ -62,6 +69,7 @@ def random3_5items(objList):
     eachY = 2 / objNum
     beforeX = 0
     beforeY = 0
+    objRet = []
     for i in range(objNum):
         # 随机选取1个obj文件
         obj_fname = random.choice(list(objList))
@@ -80,14 +88,15 @@ def random3_5items(objList):
         beforeY = obj.dimensions.y
         # 放入items集合
         # bpy.data.collections['items'].objects.link(obj)
+        objRet.append([obj_fname, obj])
     addRenderFrame()
-    return objNum
+    return objRet
 
 
 # 修改地面纹理
-def change_ground_texture():
+def change_ground_texture(JSONData):
     # 设置纹理文件夹路径
-    texture_folder =  config['texture_folder']
+    texture_folder = config['texture_folder']
     # 获取所有的.jpg文件
     jpg_files = [f for f in os.listdir(texture_folder) if f.lower().endswith('.jpg')]
 
@@ -98,6 +107,7 @@ def change_ground_texture():
     # 随机选择一个.jpg文件
     selected_file = random.choice(jpg_files)
     selected_file_path = os.path.join(texture_folder, selected_file)
+    JSONData["ground_texture_path"] = str(selected_file)
 
     # 确保对象存在
     if "ground" not in bpy.data.objects:
@@ -138,20 +148,45 @@ def change_ground_texture():
 
 
 # 随机设置相机位置
-def randomCamera():
+def randomCamera(JSONData):
     # 随机选择Camera，Camera1，Camera2中的一个相机
     camera = random.choice([bpy.data.objects['Camera'], bpy.data.objects['Camera1'], bpy.data.objects['Camera2']])
     bpy.context.scene.camera = camera
 
+    info = {}
+    x, y, z = camera.location
+    info["location"] = {"x": x, "y": y, "z": z}
+    x, y, z = camera.rotation_euler
+    info["rotation_euler"] = {"x": x, "y": y, "z": z}
+    x, y, z = camera.scale
+    info["scale"] = {"x": x, "y": y, "z": z}
+
+    info["clip"] = {"start": camera.data.clip_start, "end": camera.data.clip_end}
+    info["lens"] = camera.data.lens
+
+    # TODO: 焦距等属性
+    JSONData["camera"] = info
+
 
 # 随机设置灯光
-def changeLight():
+def changeLight(JSONData):
     # 选中名为"left"的灯光
     light = bpy.data.objects['left']
     # 随机设置灯光的强度为50到200之间的值
     light.data.energy = random.uniform(200, 400)
-
     light.location = random.uniform(-4.5, 1.5), random.uniform(-2.5, 2.5), random.uniform(0.5, 5)
+
+    info = {}
+    x, y, z = light.location
+    info["location"] = {"x": x, "y": y, "z": z}
+    x, y, z = light.rotation_euler
+    info["rotation_euler"] = {"x": x, "y": y, "z": z}
+    x, y, z = light.scale
+    info["scale"] = {"x": x, "y": y, "z": z}
+    info["energy"] = light.data.energy
+    info["type"] = light.data.type
+
+    JSONData["light"] = info
 
 
 # 制作渲染帧，使得可以获得每个物体的阴影
@@ -177,16 +212,20 @@ def addRenderFrame():
         obj.keyframe_insert(data_path="visible_camera", frame=0)
         obj.keyframe_insert(data_path="visible_shadow", frame=0)
         obj.keyframe_insert(data_path="is_holdout", frame=0)
-    # 第1帧所有物体不可见
+    # 第1帧所有物体阴影消除
+    for obj in bpy.data.collections['items'].objects:
+        obj.visible_shadow = False
+        obj.keyframe_insert(data_path="visible_shadow", frame=1)
+    # 第2帧所有物体不可见
     for obj in bpy.data.collections['items'].objects:
         obj.visible_camera = False
         obj.visible_shadow = False
         obj.pass_index = 0
-        obj.keyframe_insert(data_path="pass_index", frame=1)
-        obj.keyframe_insert(data_path="visible_camera", frame=1)
-        obj.keyframe_insert(data_path="visible_shadow", frame=1)
+        obj.keyframe_insert(data_path="pass_index", frame=2)
+        obj.keyframe_insert(data_path="visible_camera", frame=2)
+        obj.keyframe_insert(data_path="visible_shadow", frame=2)
     # 循环items集合中的所有物体，每隔一秒可见一个物体
-    i = 2
+    i = 3
     for obj in bpy.data.collections['items'].objects:
         obj.pass_index = 1
         obj.keyframe_insert(data_path="pass_index", frame=i)
@@ -242,6 +281,32 @@ def render_animation():
     bpy.ops.render.render(animation=True)    
 
 
+def objInfo2JSON(objInfo, JSONData, objRoot):
+    infoList = []
+    cnt = 0
+    for fname, obj in objInfo:
+        cnt += 1
+        singleInfo = {}
+        obj_path = str(fname)[len(str(objRoot)):]
+        singleInfo["obj_path"] = obj_path
+
+        # TODO: 硬编码nodes序号，可能会有错误，待观察
+        tex_path = obj.active_material.node_tree.nodes[2].image.filepath
+        tex_path = tex_path[tex_path.find(obj_path[:7]):]
+        singleInfo["texture_path"] = tex_path
+
+        x, y, z = obj.location
+        singleInfo["location"] = {"x": x, "y": y, "z": z}
+        x, y, z = obj.rotation_euler
+        singleInfo["rotation_euler"] = {"x": x, "y": y, "z": z}
+        x, y, z = obj.scale
+        singleInfo["scale"] = {"x": x, "y": y, "z": z}
+        infoList.append(singleInfo)
+
+    JSONData["object_count"] = cnt
+    JSONData["objects"] = infoList
+
+
 ####################################################################################
 # 程序开始
 ####################################################################################
@@ -251,12 +316,10 @@ def render_animation():
 with open(current_dir+'\\config.json', 'r') as f:
     config = json.load(f)
     
-print('Google Scanned Objects dir:',config['google_research_url'])
+print('Google Scanned Objects dir:', config['google_research_url'])
 # obj文件夹路径
 obj_root = pathlib.Path(config['google_research_url'])
 objList = load_obj_paths(obj_root)
-
-randomCamera()
 
 # 切换当前工作目录到脚本所在的目录
 os.chdir(current_dir)
@@ -269,19 +332,27 @@ outputUrl = config['outputUrl']
 for i in range(times):
     # 获得时间戳
     now = int(time.time())
+    JSONData = {}
     outputUrl1 = outputUrl + '\\' + str(now)
-    print('baseUrl and outputUrl1:',baseUrl, outputUrl1)
+    print('baseUrl and outputUrl1:', baseUrl, outputUrl1)
     remove_all_objects_from_collection(bpy.data.collections['items'])
+    remove_all_materials()
     # 随机生成3-5个物体
-    random3_5items(objList)
+    objInfo = random3_5items(objList)
+    objInfo2JSON(objInfo, JSONData, obj_root)
     # 随机修改ground材质、光源
-    change_ground_texture()
-    changeLight()
+    change_ground_texture(JSONData)
+    changeLight(JSONData)
+    randomCamera(JSONData)
     # 保存.blend文件
     if(not os.path.exists(outputUrl1)):
         os.makedirs(outputUrl1)
-    bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+'.blend')
+    bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+os.sep+str(now)+'.blend')
+    with open(outputUrl1+os.sep+str(now)+'data.json', 'w') as f:
+        json.dump(JSONData, f)
+
     # 渲染动画
     render_animation()
     HandleResult(baseUrl, outputUrl1)
+    
 

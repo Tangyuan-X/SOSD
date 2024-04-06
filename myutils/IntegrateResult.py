@@ -35,8 +35,17 @@ def integrateResult(file_path):
                     pixels[i, j] = curColor
         # 将IndexObj图片粘贴到result图片上
         result.paste(index_obj, (0, 0), index_obj)
+        index_obj.close()
     # 保存结果
-    result.save(os.path.join(file_path, 'result.png'))
+    result1 = result.copy()
+    pixels = result.load()
+    for i in range(result.width):
+        for j in range(result.height):
+            r, g, b, a = pixels[i, j]
+            if a==0:
+                pixels[i, j] = (0,0,0,255)
+    result.save(os.path.join(file_path, 'object_mask.png'))
+    first_index_obj.close()
 
 
     # 将路径中所有f'shadowxxxxx.png'的图片合并成一张图片
@@ -67,13 +76,34 @@ def integrateResult(file_path):
                     pixels[i, j] = curColor
         # 将shadow图片粘贴到result图片上
         result.paste(shadow, (0, 0), shadow)
+        shadow.close()
     # 保存结果
+    result2 = result.copy()
+    pixels = result.load()
+    for i in range(result.width):
+        for j in range(result.height):
+            r, g, b, a = pixels[i, j]
+            if a==0:
+                pixels[i, j] = (0,0,0,255)
     result.save(os.path.join(file_path, 'shadow_mask.png'))
+    first_shadow.close()
 
     # 将shadow和result合并
-    result = PIL.Image.open(os.path.join(file_path, 'result.png'))
-    shadow = PIL.Image.open(os.path.join(file_path, 'shadow_mask.png'))
-    result.paste(shadow, (0, 0), shadow)
-    result.save(os.path.join(file_path, 'object_shadow_mask.png'))
+    result1.paste(result2, (0, 0), result2)
+    pixels = result1.load()
+    for i in range(result1.width):
+        for j in range(result1.height):
+            r, g, b, a = pixels[i, j]
+            if a==0:
+                pixels[i, j] = (0,0,0,255)
+    result1.save(os.path.join(file_path, 'object_shadow_mask.png'))
+    result1.close()
+    result2.close()
+    result.close()
+    
+    for index_obj_file_name in index_obj_file_names:
+        os.remove(os.path.join(file_path, index_obj_file_name))
+    for shadow_file_name in shadow_file_names:
+        os.remove(os.path.join(file_path, shadow_file_name))
     
     
