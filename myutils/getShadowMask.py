@@ -1,5 +1,6 @@
 from PIL import Image
 import colorsys
+import os
 
 
 # 导出阴影
@@ -22,5 +23,5 @@ def getShadowMask(foreground, index, outputUrl):
             else:
                 pixels[i, j] = (0, 255, 0, 255)
     # 保存结果
-    foreground.save(outputUrl + f'\\shadow_mask{index:04d}.png')
+    foreground.save(outputUrl + os.sep + f'shadow_mask{index:04d}.png')
     return foreground

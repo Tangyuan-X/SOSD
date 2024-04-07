@@ -1,5 +1,6 @@
 from PIL import Image
 import colorsys
+import os
 
 
 # 导出阴影
@@ -20,5 +21,5 @@ def getShadow(foreground, index, outputUrl):
 #                pixels[i, j] = (0, 0, 0, 0)
 #             其他不变
     # 保存结果
-    foreground.save(outputUrl + f'\\shadow_soft_mask{index:04d}.png')
+    foreground.save(outputUrl + os.sep +f'shadow_soft_mask{index:04d}.png')
     return foreground

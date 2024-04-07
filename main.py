@@ -13,7 +13,7 @@ import json
 # 获取 main.py 的目录
 current_dir = os.path.dirname(os.path.dirname(__file__))
 print("current dir: "+current_dir)
-sys.path.append(current_dir+"\\myutils")
+sys.path.append(current_dir+os.sep+"myutils")
 
 from BlenderImageAndShadow import HandleResult
 
@@ -24,13 +24,13 @@ from BlenderImageAndShadow import HandleResult
 # 读取模型目录
 def load_obj_paths(obj_root):
     # 缓存obj文件夹路径
-    if not os.path.exists(current_dir+'\\obj_paths.pkl'):
+    if not os.path.exists(current_dir+os.sep+'obj_paths.pkl'):
         objList = list(obj_root.glob('**/*.obj'))
         print(objList)
-        with open(current_dir+'\\obj_paths.pkl', 'wb') as f:
+        with open(current_dir+os.sep+'obj_paths.pkl', 'wb') as f:
             pickle.dump(objList, f)
     else:
-        with open(current_dir+'\\obj_paths.pkl', 'rb') as f:
+        with open(current_dir+os.sep+'obj_paths.pkl', 'rb') as f:
             objList = pickle.load(f)
     return objList
 
@@ -164,7 +164,6 @@ def randomCamera(JSONData):
     info["clip"] = {"start": camera.data.clip_start, "end": camera.data.clip_end}
     info["lens"] = camera.data.lens
 
-    # TODO: 焦距等属性
     JSONData["camera"] = info
 
 
@@ -311,9 +310,8 @@ def objInfo2JSON(objInfo, JSONData, objRoot):
 # 程序开始
 ####################################################################################
 
-
 # 导入json配置
-with open(current_dir+'\\config.json', 'r') as f:
+with open(current_dir+os.sep+'config.json', 'r') as f:
     config = json.load(f)
     
 print('Google Scanned Objects dir:', config['google_research_url'])
@@ -327,14 +325,17 @@ os.chdir(current_dir)
 times = 10
 # baseUrl
 baseUrl = config['baseUrl']
+bpy.context.scene.render.filepath = config['baseUrl'] + os.sep + "tmp" + os.sep
+comp_node = bpy.context.scene.node_tree.nodes["file_output123"]
+comp_node.base_path = config['baseUrl']
 # outputUrl
 outputUrl = config['outputUrl']
 for i in range(times):
     # 获得时间戳
     now = int(time.time())
     JSONData = {}
-    outputUrl1 = outputUrl + '\\' + str(now)
-    print('baseUrl and outputUrl1:', baseUrl, outputUrl1)
+    outputUrl1 = outputUrl + os.sep + str(now)
+    print('baseUrl and outputUrl1:', baseUrl, outputUrl1, flush=True)
     remove_all_objects_from_collection(bpy.data.collections['items'])
     remove_all_materials()
     # 随机生成3-5个物体
