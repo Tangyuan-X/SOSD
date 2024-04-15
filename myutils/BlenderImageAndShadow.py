@@ -38,9 +38,13 @@ def HandleResult(baseUrl, outputUrl):
         shadow_mask = gsm.getShadowMask(pure_shadow.copy(), count, outputUrl)
         # 获取阴影
         realShadow = gs.getShadow(pure_shadow.copy(), count, outputUrl)
+
+        self_shadow = Image.open(baseUrl + os.sep + f'Image{index + 6:04d}.png')
+        self_shadow_mask = gsm.getShadowMask(self_shadow.copy(), count, outputUrl, "self_shadow_mask")
+        real_self_shadow = gs.getShadow(self_shadow.copy(), count, outputUrl, "self_shadow_soft_mask")
         
         # 保存结果
-        index += 6
+        index += 7
         count += 1
         # 关闭图像
         background.close()
@@ -49,6 +53,9 @@ def HandleResult(baseUrl, outputUrl):
         id.close()
         pure_shadow.close()
         realShadow.close()
+        self_shadow.close()
+        self_shadow_mask.close()
+        real_self_shadow.close()
 
     # 将得到所有baseUrl路径下的png文件移动到outputUrl下的origin文件夹中
     if not os.path.exists(outputUrl + os.sep +'origin'):

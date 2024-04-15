@@ -62,7 +62,8 @@ def set_obj_scale_to_max_size(obj, max_size=1.0):
     obj.scale = (scale_factor, scale_factor, scale_factor)
 
 
-# 随机选择3-5个模型
+# 随机选择3-5个模型，由于生成自阴影的方法需要同一个物体的两个一样的模型，所以数量翻倍
+# objRet中，第n个（从0开始计数）物体的模型下标为2n和2n+1
 def random3_5items(objList):
     objNum = random.randint(3, 5)
     eachX = 3 / objNum
@@ -81,15 +82,25 @@ def random3_5items(objList):
         # 设置obj z=0，x=1.7，y=2
         obj.location = (randomX, randomY, 0)
         # 设置物体的缩放
-        set_obj_scale_to_max_size(obj, max_size=random.uniform(0.1, 1))
+        scale_size = random.uniform(0.1, 1)
+        set_obj_scale_to_max_size(obj, max_size=scale_size)
         # 随机设置物体的旋转
-        obj.rotation_euler = 0,0, random.uniform(0, 2 * math.pi)
+        rotate = random.uniform(0, 2 * math.pi)
+        obj.rotation_euler = 0, 0, rotate
         beforeX = obj.dimensions.x
         beforeY = obj.dimensions.y
         # 放入items集合
         # bpy.data.collections['items'].objects.link(obj)
         objRet.append([obj_fname, obj])
-    addRenderFrame()
+
+        bpy.ops.import_scene.obj(filepath=str(obj_fname))
+        obj = bpy.context.selected_objects[0]
+        obj.location = (randomX, randomY, 0)
+        set_obj_scale_to_max_size(obj, max_size=scale_size)
+        obj.rotation_euler = 0, 0, rotate
+        objRet.append([obj_fname, obj])
+
+    addRenderFrame(objRet)
     return objRet
 
 
@@ -189,13 +200,15 @@ def changeLight(JSONData):
 
 
 # 制作渲染帧，使得可以获得每个物体的阴影
-def addRenderFrame():
+def addRenderFrame(objInfo):
     ground = bpy.data.objects['ground']
     # 清除ground的动画
     ground.animation_data_clear()
     # 创建动画序列
     bpy.context.scene.render.fps = 1
     # 第0帧所有物体可见
+    ground.is_shadow_catcher = False
+    ground.keyframe_insert(data_path="is_shadow_catcher", frame=0)
     for obj in bpy.data.collections['items'].objects:
         obj.visible_camera = True
         obj.visible_shadow = True
@@ -203,14 +216,22 @@ def addRenderFrame():
         obj.visible_glossy = False
         obj.pass_index = 1
         obj.is_holdout = False
-        ground.is_shadow_catcher = False
-        ground.keyframe_insert(data_path="is_shadow_catcher", frame=0)
+        obj.is_shadow_catcher = False
         obj.keyframe_insert(data_path="visible_diffuse", frame=0)
         obj.keyframe_insert(data_path="visible_glossy", frame=0)
+        obj.keyframe_insert(data_path="is_shadow_catcher", frame=0)
         obj.keyframe_insert(data_path="pass_index", frame=0)
         obj.keyframe_insert(data_path="visible_camera", frame=0)
         obj.keyframe_insert(data_path="visible_shadow", frame=0)
         obj.keyframe_insert(data_path="is_holdout", frame=0)
+    for idx in range(1, len(objInfo), 2):
+        [fname, obj] = objInfo[idx]
+        obj.visible_camera = False
+        obj.visible_shadow = False
+        obj.pass_index = 0
+        obj.keyframe_insert(data_path="visible_camera", frame=0)
+        obj.keyframe_insert(data_path="visible_shadow", frame=0)
+        obj.keyframe_insert(data_path="pass_index", frame=0)
     # 第1帧所有物体阴影消除
     for obj in bpy.data.collections['items'].objects:
         obj.visible_shadow = False
@@ -225,7 +246,8 @@ def addRenderFrame():
         obj.keyframe_insert(data_path="visible_shadow", frame=2)
     # 循环items集合中的所有物体，每隔一秒可见一个物体
     i = 3
-    for obj in bpy.data.collections['items'].objects:
+    for idx in range(0, len(objInfo), 2):
+        [fname, obj] = objInfo[idx]
         obj.pass_index = 1
         obj.keyframe_insert(data_path="pass_index", frame=i)
         obj.visible_camera = True
@@ -260,16 +282,35 @@ def addRenderFrame():
         obj.visible_shadow = False
         obj.keyframe_insert(data_path="visible_shadow", frame=i + 5)
         obj.keyframe_insert(data_path="is_holdout", frame=i + 5)
-        
+
+        # 渲染自阴影
+        [fname, obj2] = objInfo[idx+1]
+        obj.visible_shadow = True
+        obj.is_shadow_catcher = True
+        obj.keyframe_insert(data_path="visible_shadow", frame=i + 6)
+        obj.keyframe_insert(data_path="is_shadow_catcher", frame=i + 6)
+        obj2.is_holdout = True
+        obj2.visible_diffuse = True
+        obj2.keyframe_insert(data_path="is_holdout", frame=i + 6)
+        obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 6)
+
+        # 设置本次的物体不可见，为下一个物体的渲染扫清障碍
         obj.visible_camera = False
         obj.visible_shadow = False
         obj.pass_index = 0
         ground.is_shadow_catcher = False
-        obj.keyframe_insert(data_path="pass_index", frame=i + 6)
-        obj.keyframe_insert(data_path="visible_camera", frame=i + 6)
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 6)
-        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 6)
-        i += 6
+        obj.keyframe_insert(data_path="pass_index", frame=i + 7)
+        obj.keyframe_insert(data_path="visible_camera", frame=i + 7)
+        obj.keyframe_insert(data_path="visible_shadow", frame=i + 7)
+        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 7)
+        obj2.is_holdout = False
+        obj2.visible_diffuse = False
+        obj2.keyframe_insert(data_path="is_holdout", frame=i + 7)
+        obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 7)
+
+        i += 7
+
+
     i -= 1
     bpy.context.scene.frame_end = i
     
@@ -283,7 +324,9 @@ def render_animation():
 def objInfo2JSON(objInfo, JSONData, objRoot):
     infoList = []
     cnt = 0
-    for fname, obj in objInfo:
+    sz = len(objInfo)
+    for idx in range(0, sz, 2):
+        fname, obj = objInfo[idx]
         cnt += 1
         singleInfo = {}
         obj_path = str(fname)[len(str(objRoot)):]
@@ -306,9 +349,35 @@ def objInfo2JSON(objInfo, JSONData, objRoot):
     JSONData["objects"] = infoList
 
 
+def enable_gpus(device_type, use_cpus=False):
+    preferences = bpy.context.preferences
+    cycles_preferences = preferences.addons["cycles"].preferences
+    cycles_preferences.refresh_devices()
+    devices = cycles_preferences.devices
+
+    if not devices:
+        raise RuntimeError("Unsupported device type")
+
+    activated_gpus = []
+    for device in devices:
+        if device.type == "CPU":
+            device.use = use_cpus
+        else:
+            device.use = True
+            activated_gpus.append(device.name)
+            print('activated gpu', device.name)
+
+    cycles_preferences.compute_device_type = device_type
+    bpy.context.scene.cycles.device = "GPU"
+
+    return activated_gpus
+
+
 ####################################################################################
 # 程序开始
 ####################################################################################
+
+enable_gpus("CUDA")
 
 # 导入json配置
 with open(current_dir+os.sep+'config.json', 'r') as f:

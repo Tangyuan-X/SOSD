@@ -4,7 +4,7 @@ import os
 
 
 # 导出阴影
-def getShadowMask(foreground, index, outputUrl):
+def getShadowMask(foreground, index, outputUrl, filename="shadow_mask"):
     # 将图像转换为RGBA模式，以便处理透明度通道
     foreground = foreground.convert('RGBA')
     # 获取图像的像素数据
@@ -23,5 +23,5 @@ def getShadowMask(foreground, index, outputUrl):
             else:
                 pixels[i, j] = (0, 255, 0, 255)
     # 保存结果
-    foreground.save(outputUrl + os.sep + f'shadow_mask{index:04d}.png')
+    foreground.save(outputUrl + os.sep + filename + f'{index:04d}.png')
     return foreground
