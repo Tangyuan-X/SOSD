@@ -208,7 +208,11 @@ def addRenderFrame(objInfo):
     bpy.context.scene.render.fps = 1
     # 第0帧所有物体可见
     ground.is_shadow_catcher = False
+    ground.visible_camera = True
+    ground.visible_shadow = True
     ground.keyframe_insert(data_path="is_shadow_catcher", frame=0)
+    ground.keyframe_insert(data_path="visible_camera", frame=0)
+    ground.keyframe_insert(data_path="visible_shadow", frame=0)
     for obj in bpy.data.collections['items'].objects:
         obj.visible_camera = True
         obj.visible_shadow = True
@@ -254,61 +258,52 @@ def addRenderFrame(objInfo):
         obj.visible_shadow = True
         obj.keyframe_insert(data_path="visible_camera", frame=i)
         obj.keyframe_insert(data_path="visible_shadow", frame=i)
-        
         ground.is_shadow_catcher = True
-        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 1)
-        
-        obj.visible_camera = False
-        ground.is_shadow_catcher = False
-        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
-        obj.keyframe_insert(data_path="visible_camera", frame=i + 2)
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 2)
-        
-        obj.visible_camera = True
-        obj.visible_shadow = False
-        obj.pass_index = 1
-        obj.keyframe_insert(data_path="pass_index", frame=i + 3)
-        obj.keyframe_insert(data_path="visible_camera", frame=i + 3)
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 3)
+        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i)
         
         obj.is_holdout = True
         obj.visible_shadow = True
         ground.is_shadow_catcher = True
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 4)
-        obj.keyframe_insert(data_path="is_holdout", frame=i + 4)
-        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 4)
-        
-        obj.is_holdout = False
-        obj.visible_shadow = False
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 5)
-        obj.keyframe_insert(data_path="is_holdout", frame=i + 5)
+        obj.keyframe_insert(data_path="visible_shadow", frame=i + 1)
+        obj.keyframe_insert(data_path="is_holdout", frame=i + 1)
+        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 1)
 
         # 渲染自阴影
         [fname, obj2] = objInfo[idx+1]
         obj.visible_shadow = True
         obj.is_shadow_catcher = True
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 6)
-        obj.keyframe_insert(data_path="is_shadow_catcher", frame=i + 6)
+        obj.is_holdout = False
+        obj.keyframe_insert(data_path="visible_shadow", frame=i + 2)
+        obj.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
+        obj.keyframe_insert(data_path="is_holdout", frame=i + 2)
         obj2.is_holdout = True
         obj2.visible_diffuse = True
-        obj2.keyframe_insert(data_path="is_holdout", frame=i + 6)
-        obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 6)
+        obj2.keyframe_insert(data_path="is_holdout", frame=i + 2)
+        obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 2)
+        ground.is_shadow_catcher = False
+        ground.visible_camera = False
+        ground.visible_shadow = False
+        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
+        ground.keyframe_insert(data_path="visible_camera", frame=i + 2)
+        ground.keyframe_insert(data_path="visible_shadow", frame=i + 2)
 
         # 设置本次的物体不可见，为下一个物体的渲染扫清障碍
         obj.visible_camera = False
         obj.visible_shadow = False
         obj.pass_index = 0
-        ground.is_shadow_catcher = False
-        obj.keyframe_insert(data_path="pass_index", frame=i + 7)
-        obj.keyframe_insert(data_path="visible_camera", frame=i + 7)
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 7)
-        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 7)
+        ground.visible_camera = True
+        ground.visible_shadow = True
+        obj.keyframe_insert(data_path="pass_index", frame=i + 3)
+        obj.keyframe_insert(data_path="visible_camera", frame=i + 3)
+        obj.keyframe_insert(data_path="visible_shadow", frame=i + 3)
+        ground.keyframe_insert(data_path="visible_camera", frame=i + 3)
+        ground.keyframe_insert(data_path="visible_shadow", frame=i + 3)
         obj2.is_holdout = False
         obj2.visible_diffuse = False
-        obj2.keyframe_insert(data_path="is_holdout", frame=i + 7)
-        obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 7)
+        obj2.keyframe_insert(data_path="is_holdout", frame=i + 3)
+        obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 3)
 
-        i += 7
+        i += 3
 
 
     i -= 1
@@ -414,10 +409,10 @@ for i in range(times):
     change_ground_texture(JSONData)
     changeLight(JSONData)
     randomCamera(JSONData)
-    # 保存.blend文件
+    # 保存文件
     if(not os.path.exists(outputUrl1)):
         os.makedirs(outputUrl1)
-    bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+os.sep+str(now)+'.blend')
+    # bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+os.sep+str(now)+'.blend')
     with open(outputUrl1+os.sep+str(now)+'data.json', 'w') as f:
         json.dump(JSONData, f)
 

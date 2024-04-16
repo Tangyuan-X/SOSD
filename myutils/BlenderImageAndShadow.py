@@ -28,26 +28,23 @@ def HandleResult(baseUrl, outputUrl):
     frameLength = pngNum//2-1
     print("###########frame length:", frameLength)
     while (index <= frameLength):
-        # 打开背景图
-        background = Image.open(baseUrl + os.sep +f'Image{index:04d}.png')
         # 打开id
-        id_shadow = Image.open(baseUrl + os.sep + f'IndexObj{index + 1:04d}.png')
+        id_shadow = Image.open(baseUrl + os.sep + f'IndexObj{index:04d}.png')
         id = gi.getIndexObj(id_shadow.copy(), count, outputUrl)
         # 打开阴影mask
-        pure_shadow = Image.open(baseUrl + os.sep + f'Image{index + 4:04d}.png')
+        pure_shadow = Image.open(baseUrl + os.sep + f'Image{index + 1:04d}.png')
         shadow_mask = gsm.getShadowMask(pure_shadow.copy(), count, outputUrl)
         # 获取阴影
         realShadow = gs.getShadow(pure_shadow.copy(), count, outputUrl)
 
-        self_shadow = Image.open(baseUrl + os.sep + f'Image{index + 6:04d}.png')
+        self_shadow = Image.open(baseUrl + os.sep + f'Image{index + 2:04d}.png')
         self_shadow_mask = gsm.getShadowMask(self_shadow.copy(), count, outputUrl, "self_shadow_mask")
         real_self_shadow = gs.getShadow(self_shadow.copy(), count, outputUrl, "self_shadow_soft_mask")
         
         # 保存结果
-        index += 7
+        index += 3
         count += 1
         # 关闭图像
-        background.close()
         shadow_mask.close()
         id_shadow.close()
         id.close()
@@ -57,15 +54,21 @@ def HandleResult(baseUrl, outputUrl):
         self_shadow_mask.close()
         real_self_shadow.close()
 
-    # 将得到所有baseUrl路径下的png文件移动到outputUrl下的origin文件夹中
-    if not os.path.exists(outputUrl + os.sep +'origin'):
-        os.makedirs(outputUrl + os.sep +'origin')
     lists = os.listdir(baseUrl)
     for i in lists:
         if i.endswith('.png'):
-            oldPath = os.path.join(baseUrl, i)
-            newPath = os.path.join(outputUrl + os.sep + 'origin', i)
-            os.rename(oldPath, newPath)
-    ir.integrateResult(outputUrl)
+            os.remove(os.path.join(baseUrl, i))
+
+    # 将得到所有baseUrl路径下的png文件移动到outputUrl下的origin文件夹中
+    # if not os.path.exists(outputUrl + os.sep +'origin'):
+    #     os.makedirs(outputUrl + os.sep +'origin')
+    # lists = os.listdir(baseUrl)
+    # for i in lists:
+    #     if i.endswith('.png'):
+    #         oldPath = os.path.join(baseUrl, i)
+    #         newPath = os.path.join(outputUrl + os.sep + 'origin', i)
+    #         os.rename(oldPath, newPath)
+
+    # ir.integrateResult(outputUrl)
     
     

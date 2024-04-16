@@ -7,7 +7,7 @@
 blender -b ./locationTest1.blend -P ./main.py
 ```
 
-其中blend文件已经搬到了[https://drive.google.com/file/d/15UhCaZ8ASu32NMDjwsPAs6aud3bIKrkA/view?usp=drive_link](https://drive.google.com/file/d/15UhCaZ8ASu32NMDjwsPAs6aud3bIKrkA/view?usp=drive_link)
+为了防止在github同步过大的二进制文件，其中blend文件已经搬到了[https://drive.google.com/drive/folders/1TjVv01WxVHClVdCdnm6T4eguckKv27-Z?usp=sharing](https://drive.google.com/drive/folders/1TjVv01WxVHClVdCdnm6T4eguckKv27-Z?usp=sharing)
 
 ## TODO
 
@@ -18,6 +18,5 @@ blender -b ./locationTest1.blend -P ./main.py
 5. 场景随机HDRI数据集
 6. 重新布置场景、重写灯光随机逻辑、物体摆放逻辑（包含防穿模）
 7. 单独构建物体阴影交叉情况的场景
-8. 阴影mask单独即可，无需合并
-9. 关注阴影先后顺序问题，可能需要使用zbuffer数据
-10. 考虑自阴影问题
+8. 关注阴影先后顺序问题，可能需要使用zbuffer数据
+9. 考虑自阴影问题
