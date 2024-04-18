@@ -65,6 +65,7 @@ def set_obj_scale_to_max_size(obj, max_size=1.0):
 # 随机选择3-5个模型，由于生成自阴影的方法需要同一个物体的两个一样的模型，所以数量翻倍
 # objRet中，第n个（从0开始计数）物体的模型下标为2n和2n+1
 def random3_5items(objList):
+    bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["items"]
     objNum = random.randint(3, 5)
     eachX = 3 / objNum
     eachY = 2 / objNum
@@ -82,17 +83,16 @@ def random3_5items(objList):
         # 设置obj z=0，x=1.7，y=2
         obj.location = (randomX, randomY, 0)
         # 设置物体的缩放
-        scale_size = random.uniform(0.1, 1)
+        scale_size = random.uniform(0.3, 1.5)
         set_obj_scale_to_max_size(obj, max_size=scale_size)
         # 随机设置物体的旋转
         rotate = random.uniform(0, 2 * math.pi)
         obj.rotation_euler = 0, 0, rotate
         beforeX = obj.dimensions.x
         beforeY = obj.dimensions.y
-        # 放入items集合
-        # bpy.data.collections['items'].objects.link(obj)
         objRet.append([obj_fname, obj])
 
+        # 以下是一模一样的第二个物体
         bpy.ops.import_scene.obj(filepath=str(obj_fname))
         obj = bpy.context.selected_objects[0]
         obj.location = (randomX, randomY, 0)
@@ -180,23 +180,99 @@ def randomCamera(JSONData):
 
 # 随机设置灯光
 def changeLight(JSONData):
-    # 选中名为"left"的灯光
-    light = bpy.data.objects['left']
-    # 随机设置灯光的强度为50到200之间的值
-    light.data.energy = random.uniform(200, 400)
-    light.location = random.uniform(-4.5, 1.5), random.uniform(-2.5, 2.5), random.uniform(0.5, 5)
+    remove_all_objects_from_collection(bpy.data.collections['light'])
+    remove_all_objects_from_collection(bpy.data.collections['tracked'])
 
-    info = {}
-    x, y, z = light.location
-    info["location"] = {"x": x, "y": y, "z": z}
-    x, y, z = light.rotation_euler
-    info["rotation_euler"] = {"x": x, "y": y, "z": z}
-    x, y, z = light.scale
-    info["scale"] = {"x": x, "y": y, "z": z}
-    info["energy"] = light.data.energy
-    info["type"] = light.data.type
+    lightNum = random.randint(1, 4)
+    lightTypes = ["POINT", "SPOT", "AREA"]
+    hasSun = False
 
-    JSONData["light"] = info
+    infos = []
+    for i in range(lightNum):
+        ltype = random.choice(lightTypes)
+        bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["light"]
+        bpy.ops.object.light_add(type=ltype)
+        light = bpy.context.selected_objects[0]
+        light.hide_render = False
+        light.hide_viewport = False
+
+        tracked = light
+        if ltype != "POINT":
+            bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["tracked"]
+            bpy.ops.object.add()
+            tracked = bpy.context.selected_objects[0]
+            tracked.location = random.uniform(-3, 3), random.uniform(-3, 3), 0
+
+        if ltype == "POINT":
+            light.data.energy = random.uniform(200, 400)
+            light.location = random.uniform(-4.5, 1.5), random.uniform(-2.5, 2.5), random.uniform(0.5, 5)
+            light.data.shadow_soft_size = random.uniform(0.1, 0.3)
+
+            info = {}
+            x, y, z = light.location
+            info["location"] = {"x": x, "y": y, "z": z}
+            x, y, z = light.rotation_euler
+            info["rotation_euler"] = {"x": x, "y": y, "z": z}
+            x, y, z = light.scale
+            info["scale"] = {"x": x, "y": y, "z": z}
+            info["energy"] = light.data.energy
+            info["type"] = light.data.type
+            info["shadow_soft_size"] = light.data.shadow_soft_size
+
+            infos.append(info)
+        elif ltype == "SPOT":
+            light.data.energy = random.uniform(150, 550)
+            light.location = random.uniform(-5, 5), random.uniform(-5, 5), random.uniform(0.5, 5)
+            light.data.shadow_soft_size = random.uniform(0.1, 0.3)
+            light.data.spot_blend = random.uniform(0.1, 0.3)
+            light.data.spot_size = random.uniform(0.3, 1.8)
+            light.constraints.new("TRACK_TO")
+            light.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
+            light.constraints[0].up_axis = "UP_Y"
+            light.constraints[0].target = tracked
+
+            info = {}
+            x, y, z = light.location
+            info["location"] = {"x": x, "y": y, "z": z}
+            x, y, z = tracked.location
+            info["track_to"] = {"x": x, "y": y, "z": z}
+            x, y, z = light.scale
+            info["scale"] = {"x": x, "y": y, "z": z}
+            info["energy"] = light.data.energy
+            info["type"] = light.data.type
+            info["shadow_soft_size"] = light.data.shadow_soft_size
+            info["spot_blend"] = light.data.spot_blend
+            info["spot_size"] = light.data.spot_size
+
+            infos.append(info)
+        elif ltype == "AREA":
+            light.data.shape = 'RECTANGLE'
+            light.data.energy = random.uniform(50, 400)
+            light.location = random.uniform(-5, 5), random.uniform(-5, 5), random.uniform(0.5, 5)
+            light.data.size = random.uniform(0.5, 2.5)
+            light.data.size_y = random.uniform(0.5, 2.5)
+            light.data.spread = random.uniform(math.pi/3, math.pi)
+            light.constraints.new("TRACK_TO")
+            light.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
+            light.constraints[0].up_axis = "UP_Y"
+            light.constraints[0].target = tracked
+
+            info = {}
+            x, y, z = light.location
+            info["location"] = {"x": x, "y": y, "z": z}
+            x, y, z = tracked.location
+            info["track_to"] = {"x": x, "y": y, "z": z}
+            x, y, z = light.scale
+            info["scale"] = {"x": x, "y": y, "z": z}
+            info["energy"] = light.data.energy
+            info["type"] = light.data.type
+            info["size"] = light.data.size
+            info["size_y"] = light.data.size_y
+            info["spread"] = light.data.spread
+
+            infos.append(info)
+
+    JSONData["light"] = infos
 
 
 # 制作渲染帧，使得可以获得每个物体的阴影
@@ -386,7 +462,7 @@ objList = load_obj_paths(obj_root)
 # 切换当前工作目录到脚本所在的目录
 os.chdir(current_dir)
 
-times = 10
+times = 2
 # baseUrl
 baseUrl = config['baseUrl']
 bpy.context.scene.render.filepath = config['baseUrl'] + os.sep + "tmp" + os.sep
