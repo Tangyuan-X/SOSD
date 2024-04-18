@@ -1,0 +1,12 @@
+*
+
+!.gitignore
+!config.json
+!indoor.py
+!outdoor.py
+!readme.md
+!/myutils/*
+!/scripts/*
+
+/myutils/__pycache__
+/scripts/__pycache__
