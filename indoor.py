@@ -1,14 +1,16 @@
 # 构建合成数据集
 import random
 import os
-
 import time
-import bpy
 import pickle
 import pathlib
 import math
 import sys
 import json
+
+import bpy
+from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 
 # 获取 main.py 的目录
 current_dir = os.path.dirname(os.path.dirname(__file__))
@@ -62,35 +64,69 @@ def set_obj_scale_to_max_size(obj, max_size=1.0):
     obj.scale = (scale_factor, scale_factor, scale_factor)
 
 
+def worldBoundingBox(obj):
+    """returns the corners of the bounding box of an object in world coordinates"""
+    return [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
+
+
+def objectsOverlap(obj1, obj2):
+    """returns True if the object's bounding boxes are overlapping"""
+    vert1 = worldBoundingBox(obj1)
+    vert2 = worldBoundingBox(obj2)
+    faces = [(0, 1, 2, 3), (4, 7, 6, 5), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (4, 0, 3, 7)]
+
+    bvh1 = BVHTree.FromPolygons(vert1, faces)
+    bvh2 = BVHTree.FromPolygons(vert2, faces)
+
+    return bool(bvh1.overlap(bvh2))
+
 # 随机选择3-5个模型，由于生成自阴影的方法需要同一个物体的两个一样的模型，所以数量翻倍
 # objRet中，第n个（从0开始计数）物体的模型下标为2n和2n+1
 def random3_5items(objList):
     bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["items"]
     objNum = random.randint(3, 5)
-    eachX = 3 / objNum
-    eachY = 2 / objNum
-    beforeX = 0
-    beforeY = 0
+    pos_dims = []
     objRet = []
+    objTmp = []
+
     for i in range(objNum):
         # 随机选取1个obj文件
         obj_fname = random.choice(list(objList))
         bpy.ops.import_scene.obj(filepath=str(obj_fname))
         # 选中导入的物体
         obj = bpy.context.selected_objects[0]
-        randomX = random.uniform(eachX * i, eachX * (i + 1)) + beforeX - 3
-        randomY = random.uniform(eachY * i, eachY * (i + 1)) + beforeY - 1
-        # 设置obj z=0，x=1.7，y=2
-        obj.location = (randomX, randomY, 0)
-        # 设置物体的缩放
-        scale_size = random.uniform(0.3, 1.5)
-        set_obj_scale_to_max_size(obj, max_size=scale_size)
-        # 随机设置物体的旋转
-        rotate = random.uniform(0, 2 * math.pi)
-        obj.rotation_euler = 0, 0, rotate
-        beforeX = obj.dimensions.x
-        beforeY = obj.dimensions.y
+
+        check = False
+        randomX = 0.0
+        randomY = 0.0
+        scale_size = 0.0
+        rotate = 0.0
+        for times in range(100):
+            randomX = random.uniform(-1.5, 1.5)
+            randomY = random.uniform(-1.5, 1.5)
+            # 设置obj z=0，x=1.7，y=2
+            obj.location = (randomX, randomY, 0)
+            # 设置物体的缩放
+            scale_size = random.uniform(0.3, 1.5)
+            set_obj_scale_to_max_size(obj, max_size=scale_size)
+            # 随机设置物体的旋转
+            rotate = random.uniform(0, 2 * math.pi)
+            obj.rotation_euler = 0, 0, rotate
+
+            collision = False
+            for other in objTmp:
+                if objectsOverlap(other, obj):
+                    collision = True
+                    break
+            if not collision:
+                check = True
+                break
+
+        if not check:
+            continue
+
         objRet.append([obj_fname, obj])
+        objTmp.append(obj)
 
         # 以下是一模一样的第二个物体
         bpy.ops.import_scene.obj(filepath=str(obj_fname))
@@ -290,6 +326,7 @@ def addRenderFrame(objInfo):
     ground.keyframe_insert(data_path="visible_camera", frame=0)
     ground.keyframe_insert(data_path="visible_shadow", frame=0)
     for obj in bpy.data.collections['items'].objects:
+        obj.animation_data_clear()
         obj.visible_camera = True
         obj.visible_shadow = True
         obj.visible_diffuse = False
@@ -317,39 +354,41 @@ def addRenderFrame(objInfo):
         obj.visible_shadow = False
         obj.keyframe_insert(data_path="visible_shadow", frame=1)
     # 第2帧所有物体不可见
-    for obj in bpy.data.collections['items'].objects:
-        obj.visible_camera = False
-        obj.visible_shadow = False
+    for idx in range(0, len(objInfo), 2):
+        [fname, obj] = objInfo[idx]
+        obj.is_shadow_catcher = True
         obj.pass_index = 0
         obj.keyframe_insert(data_path="pass_index", frame=2)
-        obj.keyframe_insert(data_path="visible_camera", frame=2)
-        obj.keyframe_insert(data_path="visible_shadow", frame=2)
+        obj.keyframe_insert(data_path="is_shadow_catcher", frame=2)
     # 循环items集合中的所有物体，每隔一秒可见一个物体
     i = 3
     for idx in range(0, len(objInfo), 2):
         [fname, obj] = objInfo[idx]
         obj.pass_index = 1
         obj.keyframe_insert(data_path="pass_index", frame=i)
-        obj.visible_camera = True
+        obj.is_shadow_catcher = False
         obj.visible_shadow = True
-        obj.keyframe_insert(data_path="visible_camera", frame=i)
+        obj.keyframe_insert(data_path="is_shadow_catcher", frame=i)
         obj.keyframe_insert(data_path="visible_shadow", frame=i)
         ground.is_shadow_catcher = True
         ground.keyframe_insert(data_path="is_shadow_catcher", frame=i)
         
         obj.is_holdout = True
-        obj.visible_shadow = True
-        ground.is_shadow_catcher = True
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 1)
         obj.keyframe_insert(data_path="is_holdout", frame=i + 1)
-        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 1)
 
         # 渲染自阴影
         [fname, obj2] = objInfo[idx+1]
-        obj.visible_shadow = True
+        for idx_other in range(0, len(objInfo), 2):
+            if idx_other == idx:
+                continue
+            # 防止自阴影被其他物体catch
+            [fname, obj_other] = objInfo[idx_other]
+            obj_other.is_shadow_catcher = False
+            obj_other.is_holdout = True
+            obj_other.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
+            obj_other.keyframe_insert(data_path="is_holdout", frame=i + 2)
         obj.is_shadow_catcher = True
         obj.is_holdout = False
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 2)
         obj.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
         obj.keyframe_insert(data_path="is_holdout", frame=i + 2)
         obj2.is_holdout = True
@@ -364,13 +403,13 @@ def addRenderFrame(objInfo):
         ground.keyframe_insert(data_path="visible_shadow", frame=i + 2)
 
         # 设置本次的物体不可见，为下一个物体的渲染扫清障碍
-        obj.visible_camera = False
+        obj.is_shadow_catcher = True
         obj.visible_shadow = False
         obj.pass_index = 0
         ground.visible_camera = True
         ground.visible_shadow = True
         obj.keyframe_insert(data_path="pass_index", frame=i + 3)
-        obj.keyframe_insert(data_path="visible_camera", frame=i + 3)
+        obj.keyframe_insert(data_path="is_shadow_catcher", frame=i + 3)
         obj.keyframe_insert(data_path="visible_shadow", frame=i + 3)
         ground.keyframe_insert(data_path="visible_camera", frame=i + 3)
         ground.keyframe_insert(data_path="visible_shadow", frame=i + 3)
@@ -378,9 +417,26 @@ def addRenderFrame(objInfo):
         obj2.visible_diffuse = False
         obj2.keyframe_insert(data_path="is_holdout", frame=i + 3)
         obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 3)
+        for idx_other in range(0, len(objInfo), 2):
+            if idx_other == idx:
+                continue
+            [fname, obj_other] = objInfo[idx_other]
+            obj_other.is_shadow_catcher = True
+            obj_other.is_holdout = False
+            obj_other.keyframe_insert(data_path="is_shadow_catcher", frame=i + 3)
+            obj_other.keyframe_insert(data_path="is_holdout", frame=i + 3)
 
         i += 3
 
+    fcurves = ground.animation_data.action.fcurves
+    for fcurve in fcurves:
+        for kf in fcurve.keyframe_points:
+            kf.interpolation = 'CONSTANT'
+    for obj in bpy.data.collections['items'].objects:
+        fcurves = obj.animation_data.action.fcurves
+        for fcurve in fcurves:
+            for kf in fcurve.keyframe_points:
+                kf.interpolation = 'CONSTANT'
 
     i -= 1
     bpy.context.scene.frame_end = i
@@ -414,6 +470,8 @@ def objInfo2JSON(objInfo, JSONData, objRoot):
         singleInfo["rotation_euler"] = {"x": x, "y": y, "z": z}
         x, y, z = obj.scale
         singleInfo["scale"] = {"x": x, "y": y, "z": z}
+        x, y, z = obj.dimensions
+        singleInfo["dimensions"] = {"x": x, "y": y, "z": z}
         infoList.append(singleInfo)
 
     JSONData["object_count"] = cnt
@@ -488,7 +546,7 @@ for i in range(times):
     # 保存文件
     if(not os.path.exists(outputUrl1)):
         os.makedirs(outputUrl1)
-    # bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+os.sep+str(now)+'.blend')
+    bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+os.sep+str(now)+'.blend')
     with open(outputUrl1+os.sep+str(now)+'data.json', 'w') as f:
         json.dump(JSONData, f)
 

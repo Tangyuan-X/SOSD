@@ -2,5 +2,6 @@
   "google_research_url" : "D:\\Programming\\python\\SOSD\\ScannedObjects",
   "texture_folder" : "D:\\Programming\\python\\SOSD\\texture_jpgs",
   "outputUrl" : "D:\\Programming\\python\\SOSD\\output",
-  "baseUrl" : "D:\\Programming\\python\\SOSD\\output"
+  "baseUrl" : "D:\\Programming\\python\\SOSD\\output",
+  "hdri_folder" : "D:\\Programming\\python\\SOSD\\HDRI"
 }
