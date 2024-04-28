@@ -13,7 +13,7 @@ import json
 # 获取 main.py 的目录
 current_dir = os.path.dirname(os.path.dirname(__file__))
 print("current dir: "+current_dir)
-sys.path.append(current_dir+os.sep+"myutils")
+sys.path.append(current_dir+os.sep+"utils")
 
 from BlenderImageAndShadow import HandleResult
 
@@ -401,7 +401,7 @@ for i in range(times):
         os.makedirs(outputUrl1)
     # bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+os.sep+str(now)+'.blend')
     with open(outputUrl1+os.sep+str(now)+'data.json', 'w') as f:
-        json.dump(JSONData, f)
+        json.dump(JSONData, f, indent=4)
 
     # 渲染动画
     render_animation()

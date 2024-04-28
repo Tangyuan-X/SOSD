@@ -15,7 +15,7 @@ from mathutils.bvhtree import BVHTree
 # 获取 main.py 的目录
 current_dir = os.path.dirname(os.path.dirname(__file__))
 print("current dir: "+current_dir)
-sys.path.append(current_dir+os.sep+"myutils")
+sys.path.append(current_dir+os.sep+"utils")
 
 from BlenderImageAndShadow import HandleResult
 
@@ -123,6 +123,7 @@ def random3_5items(objList):
                 break
 
         if not check:
+            bpy.data.objects.remove(obj, do_unlink=True)
             continue
 
         objRet.append([obj_fname, obj])
@@ -215,17 +216,19 @@ def randomCamera(JSONData):
 
 
 # 随机设置灯光
-def changeLight(JSONData):
+def changeLight(JSONData, max_light=4):
     remove_all_objects_from_collection(bpy.data.collections['light'])
     remove_all_objects_from_collection(bpy.data.collections['tracked'])
 
-    lightNum = random.randint(1, 4)
+    lightNum = random.randint(1, max_light)
     lightTypes = ["POINT", "SPOT", "AREA"]
     hasSun = False
 
     infos = []
     for i in range(lightNum):
         ltype = random.choice(lightTypes)
+        if max_light == 1:
+            ltype = "POINT"
         bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["light"]
         bpy.ops.object.light_add(type=ltype)
         light = bpy.context.selected_objects[0]
@@ -520,7 +523,7 @@ objList = load_obj_paths(obj_root)
 # 切换当前工作目录到脚本所在的目录
 os.chdir(current_dir)
 
-times = 2
+times = 20
 # baseUrl
 baseUrl = config['baseUrl']
 bpy.context.scene.render.filepath = config['baseUrl'] + os.sep + "tmp" + os.sep
@@ -541,14 +544,14 @@ for i in range(times):
     objInfo2JSON(objInfo, JSONData, obj_root)
     # 随机修改ground材质、光源
     change_ground_texture(JSONData)
-    changeLight(JSONData)
+    changeLight(JSONData, 1)
     randomCamera(JSONData)
     # 保存文件
     if(not os.path.exists(outputUrl1)):
         os.makedirs(outputUrl1)
-    bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+os.sep+str(now)+'.blend')
+    # bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+os.sep+str(now)+'.blend')
     with open(outputUrl1+os.sep+str(now)+'data.json', 'w') as f:
-        json.dump(JSONData, f)
+        json.dump(JSONData, f, indent=4)
 
     # 渲染动画
     render_animation()
