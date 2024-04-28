@@ -1,0 +1,189 @@
+import json
+import pycocotools.mask as mask_util
+import time
+import os
+from PIL import Image
+import numpy as np
+import copy
+
+
+output_data = {
+    "info": {
+        "description": "SOSD",
+        "version": "1.0.0",
+        "year": int(time.strftime("%Y", time.localtime())),
+        "contributor": "TBD",
+        "date_created": str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+    },
+    "licenses": [
+        {
+            "id": 1,
+            "name": "TBD"
+        }
+    ],
+    "categories": [
+        {
+            "id": 1,
+            "name": "Object",
+            "supercategory": "Object"
+        },
+        {
+            "id": 2,
+            "name": "Shadow",
+            "supercategory": "Shadow"
+        }
+    ],
+    "association": [
+        {
+            "id": 1,
+            "name": "Association",
+            "supercategory": "Association"
+        }
+    ]
+}
+
+image_cnt = 0
+annotations_cnt = 0
+association_anno_cnt = 0
+images = []
+annotations = []
+association_anno = []
+dataset_path = "D:\\Programming\\python\\SOSD\\output\\v3"
+
+
+def handleOneData(data_name):
+    global image_cnt, annotations_cnt, association_anno_cnt
+    global images, annotations, association_anno
+    global dataset_path
+
+    with open(os.path.join(dataset_path, data_name+os.sep+data_name+"data.json"), 'r') as f:
+        data_json = json.load(f)
+    object_count = data_json["object_count"]
+
+    image_cnt += 1
+    print("handling " + data_name + ", No. " + str(image_cnt))
+    image_data = {}
+    image_data["image_name"] = data_name
+    image_data["file_name"] = data_name + "/" + "origin.png"
+    image_data["shadow_free_path"] = data_name + "/" + "shadow_free.png"
+    image_data["non_object_shadow"] = False
+    image_data["id"] = image_cnt
+    image_data["image_id"] = image_cnt
+
+    origin = Image.open(os.path.join(dataset_path, data_name + os.sep + "origin.png"))
+    width = origin.width
+    height = origin.height
+    image_data["height"] = width
+    image_data["width"] = height
+    images.append(image_data)
+    origin.close()
+
+    RLEs = []
+
+    for idx in range(0, object_count):
+        annotation_data = {}
+        annotations_cnt += 1
+        annotation_data["id"] = annotations_cnt
+        annotation_data["image_id"] = image_cnt
+        annotation_data["category_id"] = 1
+        annotation_data["iscrowd"] = 0
+        annotation_data["association"] = idx+1
+
+        obj_mask = Image.open(os.path.join(dataset_path, data_name + os.sep + f'IndexObj{idx:04d}.png'))
+        annotation_data["width"] = width
+        annotation_data["height"] = height
+
+        mask_arr = np.zeros((height, width), dtype=np.uint8)
+        obj_mask = obj_mask.convert('RGBA')
+        pixels = obj_mask.load()
+        for i in range(width):
+            for j in range(height):
+                r, g, b, a = pixels[i, j]
+                if r == 255:
+                    mask_arr[j, i] = 1
+
+        rleObj = mask_util.encode(np.asarray(mask_arr, order="F"))
+        RLEs.append(rleObj.copy())
+        rleObj["counts"] = rleObj["counts"].decode("utf-8")
+
+        annotation_data["area"] = int(mask_util.area(rleObj))
+        annotation_data["segmentation"] = rleObj
+        annotation_data["bbox"] = mask_util.toBbox(rleObj).tolist()
+        # TODO: 原始图像中噪音有些多，会导致bbox偏大
+
+        annotations.append(annotation_data)
+        obj_mask.close()
+        # TODO: light和relation字段的含义是什么
+
+    for idx in range(0, object_count):
+        annotation_data = {}
+        annotations_cnt += 1
+        annotation_data["id"] = annotations_cnt
+        annotation_data["image_id"] = image_cnt
+        annotation_data["category_id"] = 2
+        annotation_data["iscrowd"] = 0
+        annotation_data["association"] = idx+1
+
+        shadow_mask = Image.open(os.path.join(dataset_path, data_name + os.sep + f'shadow_mask{idx:04d}.png'))
+        annotation_data["width"] = width
+        annotation_data["height"] = height
+
+        mask_arr = np.zeros((height, width), dtype=np.uint8)
+        shadow_mask = shadow_mask.convert('RGBA')
+        pixels = shadow_mask.load()
+        for i in range(width):
+            for j in range(height):
+                r, g, b, a = pixels[i, j]
+                if g == 255:
+                    mask_arr[j, i] = 1
+
+        rleObj = mask_util.encode(np.asarray(mask_arr, order="F"))
+        RLEs.append(rleObj.copy())
+        rleObj["counts"] = rleObj["counts"].decode("utf-8")
+
+        annotation_data["area"] = int(mask_util.area(rleObj))
+        annotation_data["segmentation"] = rleObj
+        annotation_data["bbox"] = mask_util.toBbox(rleObj).tolist()
+        # TODO: 原始图像中噪音有些多，会导致bbox偏大
+
+        annotations.append(annotation_data)
+        shadow_mask.close()
+        # TODO: light和relation字段的含义是什么
+
+    for idx in range(0, object_count):
+        association_anno_data = {}
+        association_anno_cnt += 1
+        association_anno_data["id"] = association_anno_cnt
+        association_anno_data["image_id"] = image_cnt
+        association_anno_data["category_id"] = 1
+        association_anno_data["iscrowd"] = 0
+        association_anno_data["association"] = idx+1
+
+        association_anno_data["width"] = width
+        association_anno_data["height"] = height
+
+        rleObj = mask_util.merge([RLEs[idx], RLEs[idx+object_count]])
+        rleObj["counts"] = rleObj["counts"].decode("utf-8")
+
+        association_anno_data["area"] = int(mask_util.area(rleObj))
+        association_anno_data["segmentation"] = rleObj
+        association_anno_data["bbox"] = mask_util.toBbox(rleObj).tolist()
+        # TODO: 原始图像中噪音有些多，会导致bbox偏大
+
+        association_anno.append(association_anno_data)
+        # TODO: light和relation字段的含义是什么
+
+
+for file in os.listdir(dataset_path):
+    file_path = os.path.join(dataset_path, file)
+    if os.path.isfile(file_path):
+        continue
+    elif os.path.isdir(file_path):
+        handleOneData(file)
+
+print(image_cnt)
+output_data["images"] = images
+output_data["annotations"] = annotations
+output_data["association_anno"] = association_anno
+with open('data.json', 'w') as f:
+    json.dump(output_data, f, indent=4)
