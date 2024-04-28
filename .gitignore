@@ -5,6 +5,6 @@
 !indoor.py
 !outdoor.py
 !readme.md
-!/myutils/*
+!/utils/*
 
-/myutils/__pycache__
+/utils/__pycache__
