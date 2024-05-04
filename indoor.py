@@ -77,7 +77,6 @@ def objectsOverlap(obj1, obj2):
 
     bvh1 = BVHTree.FromPolygons(vert1, faces)
     bvh2 = BVHTree.FromPolygons(vert2, faces)
-
     return bool(bvh1.overlap(bvh2))
 
 # 随机选择3-5个模型，由于生成自阴影的方法需要同一个物体的两个一样的模型，所以数量翻倍
@@ -85,9 +84,7 @@ def objectsOverlap(obj1, obj2):
 def random3_5items(objList):
     bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["items"]
     objNum = random.randint(3, 5)
-    pos_dims = []
     objRet = []
-    objTmp = []
 
     for i in range(objNum):
         # 随机选取1个obj文件
@@ -96,38 +93,18 @@ def random3_5items(objList):
         # 选中导入的物体
         obj = bpy.context.selected_objects[0]
 
-        check = False
-        randomX = 0.0
-        randomY = 0.0
-        scale_size = 0.0
-        rotate = 0.0
-        for times in range(100):
-            randomX = random.uniform(-1.5, 1.5)
-            randomY = random.uniform(-1.5, 1.5)
-            # 设置obj z=0，x=1.7，y=2
-            obj.location = (randomX, randomY, 0)
-            # 设置物体的缩放
-            scale_size = random.uniform(0.3, 1.5)
-            set_obj_scale_to_max_size(obj, max_size=scale_size)
-            # 随机设置物体的旋转
-            rotate = random.uniform(0, 2 * math.pi)
-            obj.rotation_euler = 0, 0, rotate
-
-            collision = False
-            for other in objTmp:
-                if objectsOverlap(other, obj):
-                    collision = True
-                    break
-            if not collision:
-                check = True
-                break
-
-        if not check:
-            bpy.data.objects.remove(obj, do_unlink=True)
-            continue
+        randomX = random.uniform(-1.5, 1.5)
+        randomY = random.uniform(-1.5, 1.5)
+        # 设置obj坐标
+        obj.location = (randomX, randomY, 0)
+        # 设置物体的缩放
+        scale_size = random.uniform(0.3, 1.5)
+        set_obj_scale_to_max_size(obj, max_size=scale_size)
+        # 随机设置物体的旋转
+        rotate = random.uniform(0, 2 * math.pi)
+        obj.rotation_euler = 0, 0, rotate
 
         objRet.append([obj_fname, obj])
-        objTmp.append(obj)
 
         # 以下是一模一样的第二个物体
         bpy.ops.import_scene.obj(filepath=str(obj_fname))
@@ -138,6 +115,12 @@ def random3_5items(objList):
         objRet.append([obj_fname, obj])
 
     addRenderFrame(objRet)
+
+    for i in range(0, len(objRet), 2):
+        for j in range(i+2, len(objRet), 2):
+            if objectsOverlap(objRet[i][1], objRet[j][1]):
+                return []
+
     return objRet
 
 
@@ -523,7 +506,7 @@ objList = load_obj_paths(obj_root)
 # 切换当前工作目录到脚本所在的目录
 os.chdir(current_dir)
 
-times = 20
+times = config['output_amount']
 # baseUrl
 baseUrl = config['baseUrl']
 bpy.context.scene.render.filepath = config['baseUrl'] + os.sep + "tmp" + os.sep
@@ -537,19 +520,25 @@ for i in range(times):
     JSONData = {}
     outputUrl1 = outputUrl + os.sep + str(now)
     print('baseUrl and outputUrl1:', baseUrl, outputUrl1, flush=True)
-    remove_all_objects_from_collection(bpy.data.collections['items'])
-    remove_all_materials()
-    # 随机生成3-5个物体
-    objInfo = random3_5items(objList)
+
+    while True:
+        remove_all_objects_from_collection(bpy.data.collections['items'])
+        remove_all_materials()
+        # 随机生成3-5个物体
+        objInfo = random3_5items(objList)
+        if len(objInfo) > 0:
+            break
+
     objInfo2JSON(objInfo, JSONData, obj_root)
     # 随机修改ground材质、光源
     change_ground_texture(JSONData)
-    changeLight(JSONData, 1)
+    changeLight(JSONData, config['light_amount'])
     randomCamera(JSONData)
     # 保存文件
     if(not os.path.exists(outputUrl1)):
         os.makedirs(outputUrl1)
-    # bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+os.sep+str(now)+'.blend')
+    if config["save_blend"]:
+        bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+os.sep+str(now)+'.blend')
     with open(outputUrl1+os.sep+str(now)+'data.json', 'w') as f:
         json.dump(JSONData, f, indent=4)
 

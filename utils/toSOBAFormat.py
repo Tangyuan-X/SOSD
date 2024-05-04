@@ -4,13 +4,12 @@ import time
 import os
 from PIL import Image
 import numpy as np
-import copy
 
 
 output_data = {
     "info": {
         "description": "SOSD",
-        "version": "1.0.0",
+        "version": "0.3.0",
         "year": int(time.strftime("%Y", time.localtime())),
         "contributor": "TBD",
         "date_created": str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
@@ -48,7 +47,7 @@ association_anno_cnt = 0
 images = []
 annotations = []
 association_anno = []
-dataset_path = "D:\\Programming\\python\\SOSD\\output\\v3"
+dataset_path = "D:\\Programming\\python\\SOSD\\output\\v3_val"
 
 
 def handleOneData(data_name):
@@ -73,8 +72,8 @@ def handleOneData(data_name):
     origin = Image.open(os.path.join(dataset_path, data_name + os.sep + "origin.png"))
     width = origin.width
     height = origin.height
-    image_data["height"] = width
-    image_data["width"] = height
+    image_data["height"] = height
+    image_data["width"] = width
     images.append(image_data)
     origin.close()
 
@@ -109,11 +108,11 @@ def handleOneData(data_name):
         annotation_data["area"] = int(mask_util.area(rleObj))
         annotation_data["segmentation"] = rleObj
         annotation_data["bbox"] = mask_util.toBbox(rleObj).tolist()
-        # TODO: 原始图像中噪音有些多，会导致bbox偏大
+        annotation_data["soft_shadow"] = data_name + '/' + f'shadow_soft_mask{idx:04d}.png'
 
         annotations.append(annotation_data)
         obj_mask.close()
-        # TODO: light和relation字段的含义是什么
+        # TODO: light字段的含义是什么
 
     for idx in range(0, object_count):
         annotation_data = {}
@@ -144,11 +143,13 @@ def handleOneData(data_name):
         annotation_data["area"] = int(mask_util.area(rleObj))
         annotation_data["segmentation"] = rleObj
         annotation_data["bbox"] = mask_util.toBbox(rleObj).tolist()
-        # TODO: 原始图像中噪音有些多，会导致bbox偏大
+
+        # annotation_data["soft_shadow"] = data_name + os.sep + f'shadow_soft_mask{idx:04d}.png'
+        annotation_data["soft_shadow"] = data_name + '/' + f'shadow_soft_mask{idx:04d}.png'
 
         annotations.append(annotation_data)
         shadow_mask.close()
-        # TODO: light和relation字段的含义是什么
+        # TODO: light字段的含义是什么
 
     for idx in range(0, object_count):
         association_anno_data = {}
@@ -168,10 +169,21 @@ def handleOneData(data_name):
         association_anno_data["area"] = int(mask_util.area(rleObj))
         association_anno_data["segmentation"] = rleObj
         association_anno_data["bbox"] = mask_util.toBbox(rleObj).tolist()
-        # TODO: 原始图像中噪音有些多，会导致bbox偏大
+        association_anno_data["soft_shadow"] = data_name + '/' + f'shadow_soft_mask{idx:04d}.png'
 
         association_anno.append(association_anno_data)
-        # TODO: light和relation字段的含义是什么
+        bbox1 = mask_util.toBbox(RLEs[idx]).tolist()
+        bbox1[2] = bbox1[0]+bbox1[2]
+        bbox1[3] = bbox1[1] + bbox1[3]
+        bbox2 = mask_util.toBbox(RLEs[idx+object_count]).tolist()
+        bbox2[2] = bbox2[0] + bbox2[2]
+        bbox2[3] = bbox2[1] + bbox2[3]
+
+        fi = annotations_cnt-object_count*2
+        annotations[fi+idx]["relation"] = [bbox2[0]/2+bbox2[2]/2, bbox2[1]/2+bbox2[3]/2]
+        annotations[fi+idx+object_count]["relation"] = [bbox1[0] / 2 + bbox1[2] / 2, bbox1[1] / 2 + bbox1[3] / 2]
+
+        # TODO: light字段的含义是什么
 
 
 for file in os.listdir(dataset_path):

@@ -3,5 +3,8 @@
   "texture_folder" : "D:\\Programming\\python\\SOSD\\texture_jpgs",
   "outputUrl" : "D:\\Programming\\python\\SOSD\\output",
   "baseUrl" : "D:\\Programming\\python\\SOSD\\output",
-  "hdri_folder" : "D:\\Programming\\python\\SOSD\\HDRI"
+  "hdri_folder" : "D:\\Programming\\python\\SOSD\\HDRI",
+  "output_amount" : 20,
+  "light_amount" : 1,
+  "save_blend" : true
 }

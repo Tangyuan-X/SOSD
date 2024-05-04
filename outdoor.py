@@ -1,14 +1,16 @@
 # 构建合成数据集
 import random
 import os
-
 import time
-import bpy
 import pickle
 import pathlib
 import math
 import sys
 import json
+
+import bpy
+from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 
 # 获取 main.py 的目录
 current_dir = os.path.dirname(os.path.dirname(__file__))
@@ -62,25 +64,39 @@ def set_obj_scale_to_max_size(obj, max_size=1.0):
     obj.scale = (scale_factor, scale_factor, scale_factor)
 
 
+def worldBoundingBox(obj):
+    """returns the corners of the bounding box of an object in world coordinates"""
+    return [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
+
+
+def objectsOverlap(obj1, obj2):
+    """returns True if the object's bounding boxes are overlapping"""
+    vert1 = worldBoundingBox(obj1)
+    vert2 = worldBoundingBox(obj2)
+    faces = [(0, 1, 2, 3), (4, 7, 6, 5), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (4, 0, 3, 7)]
+
+    bvh1 = BVHTree.FromPolygons(vert1, faces)
+    bvh2 = BVHTree.FromPolygons(vert2, faces)
+    return bool(bvh1.overlap(bvh2))
+
+
 # 随机选择3-5个模型，由于生成自阴影的方法需要同一个物体的两个一样的模型，所以数量翻倍
 # objRet中，第n个（从0开始计数）物体的模型下标为2n和2n+1
 def random3_5items(objList):
     bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["items"]
     objNum = random.randint(3, 5)
-    eachX = 3 / objNum
-    eachY = 2 / objNum
-    beforeX = 0
-    beforeY = 0
     objRet = []
+
     for i in range(objNum):
         # 随机选取1个obj文件
         obj_fname = random.choice(list(objList))
         bpy.ops.import_scene.obj(filepath=str(obj_fname))
         # 选中导入的物体
         obj = bpy.context.selected_objects[0]
-        randomX = random.uniform(eachX * i, eachX * (i + 1)) + beforeX - 3
-        randomY = random.uniform(eachY * i, eachY * (i + 1)) + beforeY - 1
-        # 设置obj z=0，x=1.7，y=2
+
+        randomX = random.uniform(-1.5, 1.5)
+        randomY = random.uniform(-1.5, 1.5)
+        # 设置obj坐标
         obj.location = (randomX, randomY, 0)
         # 设置物体的缩放
         scale_size = random.uniform(0.3, 1.5)
@@ -88,8 +104,7 @@ def random3_5items(objList):
         # 随机设置物体的旋转
         rotate = random.uniform(0, 2 * math.pi)
         obj.rotation_euler = 0, 0, rotate
-        beforeX = obj.dimensions.x
-        beforeY = obj.dimensions.y
+
         objRet.append([obj_fname, obj])
 
         # 以下是一模一样的第二个物体
@@ -101,6 +116,12 @@ def random3_5items(objList):
         objRet.append([obj_fname, obj])
 
     addRenderFrame(objRet)
+
+    for i in range(0, len(objRet), 2):
+        for j in range(i+2, len(objRet), 2):
+            if objectsOverlap(objRet[i][1], objRet[j][1]):
+                return []
+
     return objRet
 
 

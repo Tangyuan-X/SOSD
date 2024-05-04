@@ -24,8 +24,10 @@ blender=3.3
 
 以下软件包需要在blender自带的python环境下安装
 
-Python=3.10.13
-Pillow=10.2.0
+- Python=3.10.13
+- Pillow=10.2.0
+- pycocotools=2.0.7
+- numpy=1.22.0
 
 ## TODO
 
