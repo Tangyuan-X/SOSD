@@ -20,7 +20,7 @@ blender -b ./outdoor.blend -P ./outdoor.py
 
 ### requirement
 
-blender=3.3
+- blender=3.3
 
 以下软件包需要在blender自带的python环境下安装
 
@@ -34,4 +34,3 @@ blender=3.3
 1. 单独构建物体阴影交叉情况的场景。数据中加入关于阴影交叉占比（如交并比）的内容。
 2. 关注阴影先后顺序问题，可能需要使用zbuffer数据
 3. 考虑自阴影问题
-4. SOBA数据集格式

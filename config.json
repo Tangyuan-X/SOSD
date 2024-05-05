@@ -1,10 +1,17 @@
 {
-  "google_research_url" : "D:\\Programming\\python\\SOSD\\ScannedObjects",
-  "texture_folder" : "D:\\Programming\\python\\SOSD\\texture_jpgs",
-  "outputUrl" : "D:\\Programming\\python\\SOSD\\output",
-  "baseUrl" : "D:\\Programming\\python\\SOSD\\output",
-  "hdri_folder" : "D:\\Programming\\python\\SOSD\\HDRI",
-  "output_amount" : 20,
-  "light_amount" : 1,
-  "save_blend" : true
+	"path" : {
+		"scanned objects" : "D:\\Programming\\python\\SOSD\\ScannedObjects",
+		"ground texture" : "D:\\Programming\\python\\SOSD\\texture_jpgs",
+		"output" : "D:\\Programming\\python\\SOSD\\output",
+		"hdri texture" : "D:\\Programming\\python\\SOSD\\HDRI"
+	},
+	"indoor" : {
+		"output_amount" : 20,
+		"light_amount" : 1,
+		"save_blend" : false
+	},
+	"outdoor" : {
+		"output_amount" : 20,
+		"save_blend" : false
+	}
 }
