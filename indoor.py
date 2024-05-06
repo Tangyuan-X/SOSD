@@ -1,4 +1,5 @@
 # 构建合成数据集
+import cmath
 import random
 import os
 import time
@@ -171,6 +172,165 @@ def changeLight(JSONData, max_light=4):
     JSONData["light"] = infos
 
 
+def objLayout_shadow_inter_only(objList):
+    bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["items"]
+    objRet = []
+
+    obj_fname = random.choice(list(objList))
+    bpy.ops.import_scene.obj(filepath=str(obj_fname))
+    # 选中导入的物体
+    obj = bpy.context.selected_objects[0]
+
+    # 高光归零，防止阴影带有物体材质
+    material = obj.data.materials[0]
+    nodes = material.node_tree.nodes
+    principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
+    principled_bsdf_node.inputs['Specular'].default_value = 0.0
+
+    cn = cmath.rect(random.uniform(0.3, 0.8), random.uniform(0, 2*math.pi))
+    randomX = cn.real
+    randomY = cn.imag
+    # 设置obj坐标
+    obj.location = (randomX, randomY, 0)
+    # 设置物体的缩放
+    scale_size = random.uniform(0.3, 1.5)
+    usl.set_obj_scale_to_max_size(obj, max_size=scale_size)
+    # 随机设置物体的旋转
+    rotate = random.uniform(0, 2 * math.pi)
+    obj.rotation_euler = 0, 0, rotate
+
+    objRet.append([obj_fname, obj])
+
+    # 以下是一模一样的第二个物体
+    bpy.ops.import_scene.obj(filepath=str(obj_fname))
+    obj = bpy.context.selected_objects[0]
+    obj.location = (randomX, randomY, 0)
+    usl.set_obj_scale_to_max_size(obj, max_size=scale_size)
+    obj.rotation_euler = 0, 0, rotate
+    objRet.append([obj_fname, obj])
+
+    # 设置第二个模型，与第一个模型成一定的夹角，方便构建阴影交叉
+    cn = complex(randomX, randomY)
+    radius, deg = cmath.polar(cn)
+    cn1 = cmath.rect(radius+random.uniform(-0.2, 0.2), deg+random.uniform(math.pi/3, math.pi*4/3))
+    obj_fname = random.choice(list(objList))
+    bpy.ops.import_scene.obj(filepath=str(obj_fname))
+    # 选中导入的物体
+    obj = bpy.context.selected_objects[0]
+
+    # 高光归零，防止阴影带有物体材质
+    material = obj.data.materials[0]
+    nodes = material.node_tree.nodes
+    principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
+    principled_bsdf_node.inputs['Specular'].default_value = 0.0
+
+    randomX = cn1.real
+    randomY = cn1.imag
+    # 设置obj坐标
+    obj.location = (randomX, randomY, 0)
+    # 设置物体的缩放
+    scale_size = random.uniform(0.3, 1.5)
+    usl.set_obj_scale_to_max_size(obj, max_size=scale_size)
+    # 随机设置物体的旋转
+    rotate = random.uniform(0, 2 * math.pi)
+    obj.rotation_euler = 0, 0, rotate
+
+    objRet.append([obj_fname, obj])
+
+    # 以下是一模一样的第二个物体
+    bpy.ops.import_scene.obj(filepath=str(obj_fname))
+    obj = bpy.context.selected_objects[0]
+    obj.location = (randomX, randomY, 0)
+    usl.set_obj_scale_to_max_size(obj, max_size=scale_size)
+    obj.rotation_euler = 0, 0, rotate
+    objRet.append([obj_fname, obj])
+
+    usl.addRenderFrame(objRet, "ground")
+
+    for i in range(0, len(objRet), 2):
+        for j in range(i + 2, len(objRet), 2):
+            if usl.objectsOverlap(objRet[i][1], objRet[j][1]):
+                return []
+
+    return objRet
+
+def changeLight_shadow_inter_only(JSONData, objInfo):
+    usl.remove_all_objects_from_collection(bpy.data.collections['light'])
+
+    lightNum = 2
+
+    infos = []
+    for i in range(lightNum):
+        ltype = "POINT"
+        bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["light"]
+        bpy.ops.object.light_add(type=ltype)
+        light = bpy.context.selected_objects[0]
+        light.hide_render = False
+        light.hide_viewport = False
+
+        light.data.energy = random.uniform(300, 350)
+        obj = objInfo[i*2][1]
+        cn = complex(obj.location[0], obj.location[1])
+        radius, deg = cmath.polar(cn)
+        cn1 = cmath.rect(radius + random.uniform(1.5, 2.5), deg + random.uniform(-math.pi / 24, math.pi / 24))
+
+        light.location = cn1.real, cn1.imag, random.uniform(0.5, 1.0)
+        light.data.shadow_soft_size = random.uniform(0.1, 0.3)
+
+        info = {}
+        x, y, z = light.location
+        info["location"] = {"x": x, "y": y, "z": z}
+        x, y, z = light.rotation_euler
+        info["rotation_euler"] = {"x": x, "y": y, "z": z}
+        x, y, z = light.scale
+        info["scale"] = {"x": x, "y": y, "z": z}
+        info["energy"] = light.data.energy
+        info["type"] = light.data.type
+        info["shadow_soft_size"] = light.data.shadow_soft_size
+
+        infos.append(info)
+
+    JSONData["light"] = infos
+
+
+def cameraPos_shadow_inter_only(JSONData, objInfo):
+    usl.remove_all_objects_from_collection(bpy.data.collections['tracked'])
+    camera = bpy.data.objects['Camera1']
+    bpy.context.scene.camera = camera
+
+    cn1 = complex(objInfo[0][1].location[0], objInfo[0][1].location[1])
+    cn2 = complex(objInfo[2][1].location[0], objInfo[2][1].location[1])
+    deg = (cmath.polar(cn1)[1]+cmath.polar(cn2)[1])/2.0
+    deg += math.pi*(int(random.uniform(0, 2))) + random.uniform(-math.pi/12, math.pi/12)
+    cn3 = cmath.rect(random.uniform(3, 5), deg)
+    camera.location = cn3.real, cn3.imag, random.uniform(0.3, 3)
+
+    bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["tracked"]
+    bpy.ops.object.add()
+    tracked = bpy.context.selected_objects[0]
+    tracked.location = random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), 0
+
+    camera.constraints.new("TRACK_TO")
+    camera.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
+    camera.constraints[0].up_axis = "UP_Y"
+    camera.constraints[0].target = tracked
+
+    info = {}
+    x, y, z = camera.location
+    info["location"] = {"x": x, "y": y, "z": z}
+    x, y, z = tracked.location
+    info["track_to"] = {"x": x, "y": y, "z": z}  # track_to的时候，欧拉角不可用
+    x, y, z = camera.rotation_euler
+    info["rotation_euler"] = {"x": x, "y": y, "z": z}
+    x, y, z = camera.scale
+    info["scale"] = {"x": x, "y": y, "z": z}
+
+    info["clip"] = {"start": camera.data.clip_start, "end": camera.data.clip_end}
+    info["lens"] = camera.data.lens
+
+    JSONData["camera"] = info
+
+
 ####################################################################################
 # 程序开始
 ####################################################################################
@@ -203,15 +363,22 @@ for i in range(times):
         usl.remove_all_objects_from_collection(bpy.data.collections['items'])
         usl.remove_all_materials()
         # 随机生成3-5个物体
-        objInfo = usl.random3_5items(objList)
+        if config["indoor"]["shadow intersection dataset only"]:
+            objInfo = objLayout_shadow_inter_only(objList)
+        else:
+            objInfo = usl.random3_5items(objList)
         if len(objInfo) > 0:
             break
 
     usl.objInfo2JSON(objInfo, JSONData, obj_root)
     # 随机修改ground材质、光源
     change_ground_texture(JSONData)
-    changeLight(JSONData, config["indoor"]['light_amount'])
-    usl.randomCamera(JSONData)
+    if config["indoor"]["shadow intersection dataset only"]:
+        changeLight_shadow_inter_only(JSONData, objInfo)
+        cameraPos_shadow_inter_only(JSONData, objInfo)
+    else:
+        changeLight(JSONData, config["indoor"]['light_amount'])
+        usl.randomCamera(JSONData)
     # 保存文件
     if(not os.path.exists(outputUrl1)):
         os.makedirs(outputUrl1)

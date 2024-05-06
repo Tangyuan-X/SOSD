@@ -6,9 +6,10 @@
 		"hdri texture" : "D:\\Programming\\python\\SOSD\\HDRI"
 	},
 	"indoor" : {
-		"output_amount" : 20,
-		"light_amount" : 1,
-		"save_blend" : false
+		"output_amount" : 2,
+		"light_amount" : 4,
+		"save_blend" : true,
+		"shadow intersection dataset only" : true
 	},
 	"outdoor" : {
 		"output_amount" : 20,
