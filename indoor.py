@@ -187,7 +187,8 @@ def objLayout_shadow_inter_only(objList):
     principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
     principled_bsdf_node.inputs['Specular'].default_value = 0.0
 
-    cn = cmath.rect(random.uniform(0.3, 0.8), random.uniform(0, 2*math.pi))
+    cn = cmath.rect(random.uniform(0.3, 0.8), random.uniform(math.pi*2/3, math.pi) + random.randint(0,1)*math.pi)
+    print(cn, flush=True)
     randomX = cn.real
     randomY = cn.imag
     # 设置obj坐标
@@ -212,7 +213,8 @@ def objLayout_shadow_inter_only(objList):
     # 设置第二个模型，与第一个模型成一定的夹角，方便构建阴影交叉
     cn = complex(randomX, randomY)
     radius, deg = cmath.polar(cn)
-    cn1 = cmath.rect(radius+random.uniform(-0.2, 0.2), deg+random.uniform(math.pi/3, math.pi*4/3))
+    cn1 = cmath.rect(radius+random.uniform(-0.2, 0.2), deg+random.uniform(math.pi/3, math.pi/2))
+    print(cn1, flush=True)
     obj_fname = random.choice(list(objList))
     bpy.ops.import_scene.obj(filepath=str(obj_fname))
     # 选中导入的物体
@@ -301,7 +303,7 @@ def cameraPos_shadow_inter_only(JSONData, objInfo):
     cn1 = complex(objInfo[0][1].location[0], objInfo[0][1].location[1])
     cn2 = complex(objInfo[2][1].location[0], objInfo[2][1].location[1])
     deg = (cmath.polar(cn1)[1]+cmath.polar(cn2)[1])/2.0
-    deg += math.pi*(int(random.uniform(0, 2))) + random.uniform(-math.pi/12, math.pi/12)
+    deg += random.uniform(-math.pi/12, math.pi/12)
     cn3 = cmath.rect(random.uniform(3, 5), deg)
     camera.location = cn3.real, cn3.imag, random.uniform(0.3, 3)
 
