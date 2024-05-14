@@ -30,9 +30,9 @@ def remove_all_objects_from_collection(collection):
         bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def remove_all_materials(except_endswith="floor"):
+def remove_all_materials():
     for mat in bpy.data.materials:
-        if mat.name.endswith(except_endswith):
+        if mat.name.endswith("floor") or mat.name.endswith("ground") or mat.name.endswith("sky"):
             continue
         bpy.data.materials.remove(mat)
 
@@ -67,7 +67,7 @@ def objectsOverlap(obj1, obj2):
 
 # 随机选择3-5个模型，由于生成自阴影的方法需要同一个物体的两个一样的模型，所以数量翻倍
 # objRet中，第n个（从0开始计数）物体的模型下标为2n和2n+1
-def random3_5items(objList, ground_name="ground"):
+def random3_5items(objList):
     bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["items"]
     objNum = random.randint(3, 5)
     objRet = []
@@ -106,7 +106,7 @@ def random3_5items(objList, ground_name="ground"):
         obj.rotation_euler = 0, 0, rotate
         objRet.append([obj_fname, obj])
 
-    addRenderFrame(objRet, ground_name)
+    addRenderFrame(objRet)
 
     for i in range(0, len(objRet), 2):
         for j in range(i+2, len(objRet), 2):
@@ -137,19 +137,30 @@ def randomCamera(JSONData):
 
 
 # 制作渲染帧，使得可以获得每个物体的阴影
-def addRenderFrame(objInfo, ground_name="ground"):
-    ground = bpy.data.objects[ground_name]
+def addRenderFrame(objInfo):
     # 清除ground的动画
-    ground.animation_data_clear()
+    for background in bpy.data.collections['Collection'].objects:
+        background.animation_data_clear()
     # 创建动画序列
     bpy.context.scene.render.fps = 1
     # 第0帧所有物体可见
-    ground.is_shadow_catcher = False
-    ground.visible_camera = True
-    ground.visible_shadow = True
-    ground.keyframe_insert(data_path="is_shadow_catcher", frame=0)
-    ground.keyframe_insert(data_path="visible_camera", frame=0)
-    ground.keyframe_insert(data_path="visible_shadow", frame=0)
+    for background in bpy.data.collections['Collection'].objects:
+        background.is_shadow_catcher = False
+        background.visible_camera = True
+        background.visible_shadow = True
+        if background.name_full == 'sky':
+            background.visible_shadow = False
+            background.visible_diffuse = False
+            background.visible_glossy = False
+            background.visible_transmission = False
+            background.visible_volume_scatter = False
+            background.keyframe_insert(data_path="visible_diffuse", frame=0)
+            background.keyframe_insert(data_path="visible_glossy", frame=0)
+            background.keyframe_insert(data_path="visible_transmission", frame=0)
+            background.keyframe_insert(data_path="visible_volume_scatter", frame=0)
+        background.keyframe_insert(data_path="is_shadow_catcher", frame=0)
+        background.keyframe_insert(data_path="visible_camera", frame=0)
+        background.keyframe_insert(data_path="visible_shadow", frame=0)
     for obj in bpy.data.collections['items'].objects:
         obj.animation_data_clear()
         obj.visible_camera = True
@@ -195,8 +206,9 @@ def addRenderFrame(objInfo, ground_name="ground"):
         obj.visible_shadow = True
         obj.keyframe_insert(data_path="is_shadow_catcher", frame=i)
         obj.keyframe_insert(data_path="visible_shadow", frame=i)
-        ground.is_shadow_catcher = True
-        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i)
+        for background in bpy.data.collections['Collection'].objects:
+            background.is_shadow_catcher = True
+            background.keyframe_insert(data_path="is_shadow_catcher", frame=i)
 
         obj.is_holdout = True
         obj.keyframe_insert(data_path="is_holdout", frame=i + 1)
@@ -220,24 +232,28 @@ def addRenderFrame(objInfo, ground_name="ground"):
         obj2.visible_diffuse = True
         obj2.keyframe_insert(data_path="is_holdout", frame=i + 2)
         obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 2)
-        ground.is_shadow_catcher = False
-        ground.visible_camera = False
-        ground.visible_shadow = False
-        ground.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
-        ground.keyframe_insert(data_path="visible_camera", frame=i + 2)
-        ground.keyframe_insert(data_path="visible_shadow", frame=i + 2)
+        for background in bpy.data.collections['Collection'].objects:
+            background.is_shadow_catcher = False
+            background.visible_camera = False
+            background.visible_shadow = False
+            background.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
+            background.keyframe_insert(data_path="visible_camera", frame=i + 2)
+            background.keyframe_insert(data_path="visible_shadow", frame=i + 2)
 
         # 设置本次的物体不可见，为下一个物体的渲染扫清障碍
         obj.is_shadow_catcher = True
         obj.visible_shadow = False
         obj.pass_index = 0
-        ground.visible_camera = True
-        ground.visible_shadow = True
         obj.keyframe_insert(data_path="pass_index", frame=i + 3)
         obj.keyframe_insert(data_path="is_shadow_catcher", frame=i + 3)
         obj.keyframe_insert(data_path="visible_shadow", frame=i + 3)
-        ground.keyframe_insert(data_path="visible_camera", frame=i + 3)
-        ground.keyframe_insert(data_path="visible_shadow", frame=i + 3)
+        for background in bpy.data.collections['Collection'].objects:
+            background.visible_camera = True
+            background.visible_shadow = True
+            if background.name_full == 'sky':
+                background.visible_shadow = False
+            background.keyframe_insert(data_path="visible_camera", frame=i + 3)
+            background.keyframe_insert(data_path="visible_shadow", frame=i + 3)
         obj2.is_holdout = False
         obj2.visible_diffuse = False
         obj2.keyframe_insert(data_path="is_holdout", frame=i + 3)
@@ -253,10 +269,11 @@ def addRenderFrame(objInfo, ground_name="ground"):
 
         i += 3
 
-    fcurves = ground.animation_data.action.fcurves
-    for fcurve in fcurves:
-        for kf in fcurve.keyframe_points:
-            kf.interpolation = 'CONSTANT'
+    for background in bpy.data.collections['Collection'].objects:
+        fcurves = background.animation_data.action.fcurves
+        for fcurve in fcurves:
+            for kf in fcurve.keyframe_points:
+                kf.interpolation = 'CONSTANT'
     for obj in bpy.data.collections['items'].objects:
         fcurves = obj.animation_data.action.fcurves
         for fcurve in fcurves:

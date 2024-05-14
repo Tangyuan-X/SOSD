@@ -188,7 +188,6 @@ def objLayout_shadow_inter_only(objList):
     principled_bsdf_node.inputs['Specular'].default_value = 0.0
 
     cn = cmath.rect(random.uniform(0.3, 0.8), random.uniform(math.pi*2/3, math.pi) + random.randint(0,1)*math.pi)
-    print(cn, flush=True)
     randomX = cn.real
     randomY = cn.imag
     # 设置obj坐标
@@ -214,7 +213,6 @@ def objLayout_shadow_inter_only(objList):
     cn = complex(randomX, randomY)
     radius, deg = cmath.polar(cn)
     cn1 = cmath.rect(radius+random.uniform(-0.2, 0.2), deg+random.uniform(math.pi/3, math.pi/2))
-    print(cn1, flush=True)
     obj_fname = random.choice(list(objList))
     bpy.ops.import_scene.obj(filepath=str(obj_fname))
     # 选中导入的物体
@@ -247,7 +245,7 @@ def objLayout_shadow_inter_only(objList):
     obj.rotation_euler = 0, 0, rotate
     objRet.append([obj_fname, obj])
 
-    usl.addRenderFrame(objRet, "ground")
+    usl.addRenderFrame(objRet)
 
     for i in range(0, len(objRet), 2):
         for j in range(i + 2, len(objRet), 2):
@@ -255,6 +253,7 @@ def objLayout_shadow_inter_only(objList):
                 return []
 
     return objRet
+
 
 def changeLight_shadow_inter_only(JSONData, objInfo):
     usl.remove_all_objects_from_collection(bpy.data.collections['light'])

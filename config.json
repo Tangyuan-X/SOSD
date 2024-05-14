@@ -13,6 +13,6 @@
 	},
 	"outdoor" : {
 		"output_amount" : 20,
-		"save_blend" : false
+		"save_blend" : true
 	}
 }
