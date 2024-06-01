@@ -35,6 +35,7 @@ def getShadowMaskIoU(mask1, mask2):
 
 
 def handleOneData(data_name):
+    # 计算阴影相交特殊情况的阴影交叉IOU
     global dataset_path
 
     with open(os.path.join(dataset_path, data_name+os.sep+data_name+"data.json"), 'r') as f:

@@ -76,8 +76,6 @@ def change_ground_texture(JSONData):
 
 # 随机设置灯光
 def changeLight(JSONData, max_light=4):
-    usl.remove_all_objects_from_collection(bpy.data.collections['light'])
-    usl.remove_all_objects_from_collection(bpy.data.collections['tracked'])
 
     lightNum = random.randint(1, max_light)
     lightTypes = ["POINT", "SPOT", "AREA"]
@@ -248,6 +246,9 @@ def objLayout_shadow_inter_only(objList):
     usl.addRenderFrame(objRet)
 
     for i in range(0, len(objRet), 2):
+        if obj.dimensions[2] < 0.3:
+            # 物体太矮则阴影不够长无法交叉
+            return []
         for j in range(i + 2, len(objRet), 2):
             if usl.objectsOverlap(objRet[i][1], objRet[j][1]):
                 return []
@@ -256,7 +257,6 @@ def objLayout_shadow_inter_only(objList):
 
 
 def changeLight_shadow_inter_only(JSONData, objInfo):
-    usl.remove_all_objects_from_collection(bpy.data.collections['light'])
 
     lightNum = 2
 
@@ -295,7 +295,6 @@ def changeLight_shadow_inter_only(JSONData, objInfo):
 
 
 def cameraPos_shadow_inter_only(JSONData, objInfo):
-    usl.remove_all_objects_from_collection(bpy.data.collections['tracked'])
     camera = bpy.data.objects['Camera1']
     bpy.context.scene.camera = camera
 
@@ -350,6 +349,8 @@ objList = usl.load_obj_paths(current_dir, obj_root)
 times = config["indoor"]['output_amount']
 
 bpy.context.scene.render.filepath = config["path"]['output'] + os.sep + "tmp" + os.sep
+bpy.context.scene.render.resolution_x = config["resolution"]["x"]
+bpy.context.scene.render.resolution_y = config["resolution"]["y"]
 comp_node = bpy.context.scene.node_tree.nodes["file_output123"]
 comp_node.base_path = config["path"]['output']
 outputUrl = config["path"]['output']
@@ -375,9 +376,13 @@ for i in range(times):
     # 随机修改ground材质、光源
     change_ground_texture(JSONData)
     if config["indoor"]["shadow intersection dataset only"]:
+        usl.remove_all_objects_from_collection(bpy.data.collections['light'])
+        usl.remove_all_objects_from_collection(bpy.data.collections['tracked'])
         changeLight_shadow_inter_only(JSONData, objInfo)
         cameraPos_shadow_inter_only(JSONData, objInfo)
     else:
+        usl.remove_all_objects_from_collection(bpy.data.collections['light'])
+        usl.remove_all_objects_from_collection(bpy.data.collections['tracked'])
         changeLight(JSONData, config["indoor"]['light_amount'])
         usl.randomCamera(JSONData)
     # 保存文件

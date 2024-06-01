@@ -2,6 +2,7 @@ import pickle
 import os
 import random
 import math
+import cmath
 
 import bpy
 from mathutils import Vector
@@ -118,13 +119,29 @@ def random3_5items(objList):
 
 # 随机设置相机位置
 def randomCamera(JSONData):
-    # 随机选择Camera，Camera1，Camera2中的一个相机
-    camera = random.choice([bpy.data.objects['Camera'], bpy.data.objects['Camera1'], bpy.data.objects['Camera2']])
+
+    camera = bpy.data.objects['Camera1']
     bpy.context.scene.camera = camera
+
+    deg = random.uniform(-math.pi / 2, math.pi / 2)
+    cn3 = cmath.rect(random.uniform(3, 5), deg)
+    camera.location = cn3.real, cn3.imag, random.uniform(0.3, 3)
+
+    bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["tracked"]
+    bpy.ops.object.add()
+    tracked = bpy.context.selected_objects[0]
+    tracked.location = random.uniform(-1, 1), random.uniform(-1, 1), 0
+
+    camera.constraints.new("TRACK_TO")
+    camera.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
+    camera.constraints[0].up_axis = "UP_Y"
+    camera.constraints[0].target = tracked
 
     info = {}
     x, y, z = camera.location
     info["location"] = {"x": x, "y": y, "z": z}
+    x, y, z = tracked.location
+    info["track_to"] = {"x": x, "y": y, "z": z}  # track_to的时候，欧拉角不可用
     x, y, z = camera.rotation_euler
     info["rotation_euler"] = {"x": x, "y": y, "z": z}
     x, y, z = camera.scale

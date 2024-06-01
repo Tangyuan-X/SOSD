@@ -33,4 +33,4 @@ blender -b ./outdoor.blend -P ./outdoor.py
 
 1. 关注阴影先后顺序问题，可能需要使用zbuffer数据
 2. 考虑自阴影问题
-3. 考虑物体在镜头外，阴影在镜头内的场景
+3. 考虑不平整的地面

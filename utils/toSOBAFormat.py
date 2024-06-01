@@ -6,54 +6,31 @@ from PIL import Image
 import numpy as np
 
 
-output_data = {
-    "info": {
-        "description": "SOSD",
-        "version": "0.3.0",
-        "year": int(time.strftime("%Y", time.localtime())),
-        "contributor": "TBD",
-        "date_created": str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-    },
-    "licenses": [
-        {
-            "id": 1,
-            "name": "TBD"
-        }
-    ],
-    "categories": [
-        {
-            "id": 1,
-            "name": "Object",
-            "supercategory": "Object"
-        },
-        {
-            "id": 2,
-            "name": "Shadow",
-            "supercategory": "Shadow"
-        }
-    ],
-    "association": [
-        {
-            "id": 1,
-            "name": "Association",
-            "supercategory": "Association"
-        }
-    ]
-}
-
+output_data = {}
 image_cnt = 0
 annotations_cnt = 0
 association_anno_cnt = 0
 images = []
 annotations = []
 association_anno = []
-dataset_path = "D:\\Programming\\python\\SOSD\\output\\v3_val"
 
+dataset_path_root = "D:\\Programming\\python\\SOSD_Linux\\output"
+dataset_name = "v3v4"
+dataset_paths = [
+    f"{dataset_path_root}\\{dataset_name}\\train\\cross",
+    f"{dataset_path_root}\\{dataset_name}\\train\\indoor",
+    f"{dataset_path_root}\\{dataset_name}\\train\\outdoor",
+    f"{dataset_path_root}\\{dataset_name}\\test\\cross",
+    f"{dataset_path_root}\\{dataset_name}\\test\\indoor",
+    f"{dataset_path_root}\\{dataset_name}\\test\\outdoor",
+    f"{dataset_path_root}\\{dataset_name}\\val\\cross",
+    f"{dataset_path_root}\\{dataset_name}\\val\\indoor",
+    f"{dataset_path_root}\\{dataset_name}\\val\\outdoor",
+]
 
-def handleOneData(data_name):
+def handleOneData(data_name, dataset_path):
     global image_cnt, annotations_cnt, association_anno_cnt
     global images, annotations, association_anno
-    global dataset_path
 
     with open(os.path.join(dataset_path, data_name+os.sep+data_name+"data.json"), 'r') as f:
         data_json = json.load(f)
@@ -186,16 +163,58 @@ def handleOneData(data_name):
         # TODO: light字段的含义是什么
 
 
-for file in os.listdir(dataset_path):
-    file_path = os.path.join(dataset_path, file)
-    if os.path.isfile(file_path):
-        continue
-    elif os.path.isdir(file_path):
-        handleOneData(file)
+for dataset_path in dataset_paths:
+    output_data = {
+        "info": {
+            "description": "SOSD",
+            "version": "0.3.0",
+            "year": int(time.strftime("%Y", time.localtime())),
+            "contributor": "TBD",
+            "date_created": str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        },
+        "licenses": [
+            {
+                "id": 1,
+                "name": "TBD"
+            }
+        ],
+        "categories": [
+            {
+                "id": 1,
+                "name": "Object",
+                "supercategory": "Object"
+            },
+            {
+                "id": 2,
+                "name": "Shadow",
+                "supercategory": "Shadow"
+            }
+        ],
+        "association": [
+            {
+                "id": 1,
+                "name": "Association",
+                "supercategory": "Association"
+            }
+        ]
+    }
+    image_cnt = 0
+    annotations_cnt = 0
+    association_anno_cnt = 0
+    images = []
+    annotations = []
+    association_anno = []
 
-print(image_cnt)
-output_data["images"] = images
-output_data["annotations"] = annotations
-output_data["association_anno"] = association_anno
-with open('data.json', 'w') as f:
-    json.dump(output_data, f, indent=4)
+    for file in os.listdir(dataset_path):
+        file_path = os.path.join(dataset_path, file)
+        if os.path.isfile(file_path):
+            continue
+        elif os.path.isdir(file_path):
+            handleOneData(file, dataset_path)
+
+    print(image_cnt)
+    output_data["images"] = images
+    output_data["annotations"] = annotations
+    output_data["association_anno"] = association_anno
+    with open(dataset_path+'\\data.json', 'w') as f:
+        json.dump(output_data, f, indent=4)

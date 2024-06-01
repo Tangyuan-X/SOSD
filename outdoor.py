@@ -92,6 +92,8 @@ os.chdir(current_dir)
 times = config["outdoor"]['output_amount']
 
 bpy.context.scene.render.filepath = config["path"]['output'] + os.sep + "tmp" + os.sep
+bpy.context.scene.render.resolution_x = config["resolution"]["x"]
+bpy.context.scene.render.resolution_y = config["resolution"]["y"]
 comp_node = bpy.context.scene.node_tree.nodes["file_output123"]
 comp_node.base_path = config["path"]['output']
 outputUrl = config["path"]['output']
