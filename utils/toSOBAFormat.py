@@ -17,18 +17,17 @@ association_anno = []
 dataset_path_root = "D:\\Programming\\python\\SOSD_Linux\\output"
 dataset_name = "v3v4"
 dataset_paths = [
-    f"{dataset_path_root}\\{dataset_name}\\train\\cross",
-    f"{dataset_path_root}\\{dataset_name}\\train\\indoor",
-    f"{dataset_path_root}\\{dataset_name}\\train\\outdoor",
-    f"{dataset_path_root}\\{dataset_name}\\test\\cross",
-    f"{dataset_path_root}\\{dataset_name}\\test\\indoor",
-    f"{dataset_path_root}\\{dataset_name}\\test\\outdoor",
-    f"{dataset_path_root}\\{dataset_name}\\val\\cross",
-    f"{dataset_path_root}\\{dataset_name}\\val\\indoor",
-    f"{dataset_path_root}\\{dataset_name}\\val\\outdoor",
+    f"{dataset_path_root}\\{dataset_name}\\train",
+    f"{dataset_path_root}\\{dataset_name}\\test",
+    f"{dataset_path_root}\\{dataset_name}\\val"
+]
+dataset_types = [
+    "indoor",
+    "outdoor",
+    "cross"
 ]
 
-def handleOneData(data_name, dataset_path):
+def handleOneData(data_name, dataset_path, dtype):
     global image_cnt, annotations_cnt, association_anno_cnt
     global images, annotations, association_anno
 
@@ -40,11 +39,12 @@ def handleOneData(data_name, dataset_path):
     print("handling " + data_name + ", No. " + str(image_cnt))
     image_data = {}
     image_data["image_name"] = data_name
-    image_data["file_name"] = data_name + "/" + "origin.png"
-    image_data["shadow_free_path"] = data_name + "/" + "shadow_free.png"
+    image_data["file_name"] = dtype + "/" + data_name + "/" + "origin.png"
+    image_data["shadow_free_path"] = dtype + "/" + data_name + "/" + "shadow_free.png"
     image_data["non_object_shadow"] = False
     image_data["id"] = image_cnt
     image_data["image_id"] = image_cnt
+    image_data["data_type"] = dtype
 
     origin = Image.open(os.path.join(dataset_path, data_name + os.sep + "origin.png"))
     width = origin.width
@@ -85,7 +85,7 @@ def handleOneData(data_name, dataset_path):
         annotation_data["area"] = int(mask_util.area(rleObj))
         annotation_data["segmentation"] = rleObj
         annotation_data["bbox"] = mask_util.toBbox(rleObj).tolist()
-        annotation_data["soft_shadow"] = data_name + '/' + f'shadow_soft_mask{idx:04d}.png'
+        annotation_data["soft_shadow"] = dtype + "/" + data_name + '/' + f'shadow_soft_mask{idx:04d}.png'
 
         annotations.append(annotation_data)
         obj_mask.close()
@@ -122,7 +122,7 @@ def handleOneData(data_name, dataset_path):
         annotation_data["bbox"] = mask_util.toBbox(rleObj).tolist()
 
         # annotation_data["soft_shadow"] = data_name + os.sep + f'shadow_soft_mask{idx:04d}.png'
-        annotation_data["soft_shadow"] = data_name + '/' + f'shadow_soft_mask{idx:04d}.png'
+        annotation_data["soft_shadow"] = dtype + '/' + data_name + '/' + f'shadow_soft_mask{idx:04d}.png'
 
         annotations.append(annotation_data)
         shadow_mask.close()
@@ -146,7 +146,7 @@ def handleOneData(data_name, dataset_path):
         association_anno_data["area"] = int(mask_util.area(rleObj))
         association_anno_data["segmentation"] = rleObj
         association_anno_data["bbox"] = mask_util.toBbox(rleObj).tolist()
-        association_anno_data["soft_shadow"] = data_name + '/' + f'shadow_soft_mask{idx:04d}.png'
+        association_anno_data["soft_shadow"] = dtype + '/' + data_name + '/' + f'shadow_soft_mask{idx:04d}.png'
 
         association_anno.append(association_anno_data)
         bbox1 = mask_util.toBbox(RLEs[idx]).tolist()
@@ -205,12 +205,14 @@ for dataset_path in dataset_paths:
     annotations = []
     association_anno = []
 
-    for file in os.listdir(dataset_path):
-        file_path = os.path.join(dataset_path, file)
-        if os.path.isfile(file_path):
-            continue
-        elif os.path.isdir(file_path):
-            handleOneData(file, dataset_path)
+    for dtype in dataset_types:
+        dt_path = dataset_path+os.sep+dtype
+        for file in os.listdir(dt_path):
+            file_path = os.path.join(dt_path, file)
+            if os.path.isfile(file_path):
+                continue
+            elif os.path.isdir(file_path):
+                handleOneData(file, dt_path, dtype)
 
     print(image_cnt)
     output_data["images"] = images

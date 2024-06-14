@@ -124,14 +124,15 @@ def randomCamera(JSONData):
     bpy.context.scene.camera = camera
 
     deg = random.uniform(-math.pi / 2, math.pi / 2)
-    cn3 = cmath.rect(random.uniform(3, 5), deg)
-    camera.location = cn3.real, cn3.imag, random.uniform(0.3, 3)
+    cn3 = cmath.rect(random.uniform(3.5, 5), deg)
+    camera.location = cn3.real, cn3.imag, random.uniform(1, 5)
 
     bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["tracked"]
     bpy.ops.object.add()
     tracked = bpy.context.selected_objects[0]
     tracked.location = random.uniform(-1, 1), random.uniform(-1, 1), 0
 
+    camera.constraints.clear()
     camera.constraints.new("TRACK_TO")
     camera.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
     camera.constraints[0].up_axis = "UP_Y"
@@ -153,6 +154,45 @@ def randomCamera(JSONData):
     JSONData["camera"] = info
 
 
+def getCamMatrix(JSONData):
+    camera = bpy.context.scene.camera
+    mat_list = []
+    mat = camera.matrix_basis
+    for i in range(4):
+        lis = []
+        for j in range(4):
+            lis.append(mat[i][j])
+        mat_list.append(lis)
+    JSONData["camera"]["matrix_basis"] = mat_list
+
+    mat_list = []
+    mat = camera.matrix_local
+    for i in range(4):
+        lis = []
+        for j in range(4):
+            lis.append(mat[i][j])
+        mat_list.append(lis)
+    JSONData["camera"]["matrix_local"] = mat_list
+
+    mat_list = []
+    mat = camera.matrix_parent_inverse
+    for i in range(4):
+        lis = []
+        for j in range(4):
+            lis.append(mat[i][j])
+        mat_list.append(lis)
+    JSONData["camera"]["matrix_parent_inverse"] = mat_list
+
+    mat_list = []
+    mat = camera.matrix_world
+    for i in range(4):
+        lis = []
+        for j in range(4):
+            lis.append(mat[i][j])
+        mat_list.append(lis)
+    JSONData["camera"]["matrix_world"] = mat_list
+
+
 # 制作渲染帧，使得可以获得每个物体的阴影
 def addRenderFrame(objInfo):
     # 清除ground的动画
@@ -164,7 +204,7 @@ def addRenderFrame(objInfo):
     for background in bpy.data.collections['Collection'].objects:
         background.is_shadow_catcher = False
         background.visible_camera = True
-        background.visible_shadow = True
+        background.visible_shadow = False
         if background.name_full == 'sky':
             background.visible_shadow = False
             background.visible_diffuse = False
@@ -266,7 +306,7 @@ def addRenderFrame(objInfo):
         obj.keyframe_insert(data_path="visible_shadow", frame=i + 3)
         for background in bpy.data.collections['Collection'].objects:
             background.visible_camera = True
-            background.visible_shadow = True
+            background.visible_shadow = False
             if background.name_full == 'sky':
                 background.visible_shadow = False
             background.keyframe_insert(data_path="visible_camera", frame=i + 3)

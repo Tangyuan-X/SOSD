@@ -78,13 +78,11 @@ def change_ground_texture(JSONData):
 def changeLight(JSONData, max_light=4):
 
     lightNum = random.randint(1, max_light)
-    lightTypes = ["POINT", "SPOT", "AREA"]
+    global lightTypes
 
     infos = []
     for i in range(lightNum):
         ltype = random.choice(lightTypes)
-        if max_light == 1:
-            ltype = "POINT"
         bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["light"]
         bpy.ops.object.light_add(type=ltype)
         light = bpy.context.selected_objects[0]
@@ -101,7 +99,7 @@ def changeLight(JSONData, max_light=4):
         if ltype == "POINT":
             light.data.energy = random.uniform(200, 400)
             light.location = random.uniform(-4.5, 1.5), random.uniform(-2.5, 2.5), random.uniform(0.5, 5)
-            light.data.shadow_soft_size = random.uniform(0.1, 0.3)
+            light.data.shadow_soft_size = random.uniform(0, 0.2)
 
             info = {}
             x, y, z = light.location
@@ -118,9 +116,10 @@ def changeLight(JSONData, max_light=4):
         elif ltype == "SPOT":
             light.data.energy = random.uniform(150, 550)
             light.location = random.uniform(-5, 5), random.uniform(-5, 5), random.uniform(0.5, 5)
-            light.data.shadow_soft_size = random.uniform(0.1, 0.3)
+            light.data.shadow_soft_size = random.uniform(0.0, 0.1)
             light.data.spot_blend = random.uniform(0.1, 0.3)
-            light.data.spot_size = random.uniform(0.3, 1.8)
+            light.data.spot_size = random.uniform(math.pi/2, math.pi*2/3)
+            light.constraints.clear()
             light.constraints.new("TRACK_TO")
             light.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
             light.constraints[0].up_axis = "UP_Y"
@@ -142,11 +141,13 @@ def changeLight(JSONData, max_light=4):
             infos.append(info)
         elif ltype == "AREA":
             light.data.shape = 'RECTANGLE'
-            light.data.energy = random.uniform(50, 400)
-            light.location = random.uniform(-5, 5), random.uniform(-5, 5), random.uniform(0.5, 5)
-            light.data.size = random.uniform(0.5, 2.5)
-            light.data.size_y = random.uniform(0.5, 2.5)
-            light.data.spread = random.uniform(math.pi/3, math.pi)
+            light.data.energy = random.uniform(200, 400)
+            cn = cmath.rect(random.uniform(3, 4), random.uniform(0, 2*math.pi))
+            light.location = cn.real, cn.imag, random.uniform(0.5, 5)
+            light.data.size = random.uniform(10, 12.5)
+            light.data.size_y = random.uniform(10, 12.5)
+            light.data.spread = random.uniform(math.pi/180, math.pi/18)
+            light.constraints.clear()
             light.constraints.new("TRACK_TO")
             light.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
             light.constraints[0].up_axis = "UP_Y"
@@ -164,6 +165,29 @@ def changeLight(JSONData, max_light=4):
             info["size"] = light.data.size
             info["size_y"] = light.data.size_y
             info["spread"] = light.data.spread
+
+            infos.append(info)
+        elif ltype == "SUN":
+            light.data.energy = random.uniform(3, 8)
+            cn = cmath.rect(random.uniform(1, 3), random.uniform(0, 2 * math.pi))
+            light.location = cn.real, cn.imag, random.uniform(1, 5)
+            light.data.angle = random.uniform(0, math.pi*5/180)
+            light.constraints.clear()
+            light.constraints.new("TRACK_TO")
+            light.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
+            light.constraints[0].up_axis = "UP_Y"
+            light.constraints[0].target = tracked
+
+            info = {}
+            x, y, z = light.location
+            info["location"] = {"x": x, "y": y, "z": z}
+            x, y, z = tracked.location
+            info["track_to"] = {"x": x, "y": y, "z": z}
+            x, y, z = light.scale
+            info["scale"] = {"x": x, "y": y, "z": z}
+            info["energy"] = light.data.energy
+            info["type"] = light.data.type
+            info["light_angle"] = light.data.angle
 
             infos.append(info)
 
@@ -256,6 +280,58 @@ def objLayout_shadow_inter_only(objList):
     return objRet
 
 
+def objLayout_shadow_no_overlap(objList):
+    bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["items"]
+    objNum = random.randint(3, 5)
+    objRet = []
+
+    deg = random.uniform(0, 2*math.pi)
+
+    for i in range(objNum):
+        # 随机选取1个obj文件
+        obj_fname = random.choice(list(objList))
+        bpy.ops.import_scene.obj(filepath=str(obj_fname))
+        # 选中导入的物体
+        obj = bpy.context.selected_objects[0]
+
+        # 高光归零，防止阴影带有物体材质
+        material = obj.data.materials[0]
+        nodes = material.node_tree.nodes
+        principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
+        principled_bsdf_node.inputs['Specular'].default_value = 0.0
+
+        cn = cmath.rect(random.uniform(-1.5, 1.5), deg+random.uniform(-math.pi/24, math.pi/24))
+        randomX = cn.real
+        randomY = cn.imag
+        # 设置obj坐标
+        obj.location = (randomX, randomY, 0)
+        # 设置物体的缩放
+        scale_size = random.uniform(0.4, 0.8)
+        usl.set_obj_scale_to_max_size(obj, max_size=scale_size)
+        # 随机设置物体的旋转
+        rotate = random.uniform(0, 2 * math.pi)
+        obj.rotation_euler = 0, 0, rotate
+
+        objRet.append([obj_fname, obj])
+
+        # 以下是一模一样的第二个物体
+        bpy.ops.import_scene.obj(filepath=str(obj_fname))
+        obj = bpy.context.selected_objects[0]
+        obj.location = (randomX, randomY, 0)
+        usl.set_obj_scale_to_max_size(obj, max_size=scale_size)
+        obj.rotation_euler = 0, 0, rotate
+        objRet.append([obj_fname, obj])
+
+    usl.addRenderFrame(objRet)
+
+    for i in range(0, len(objRet), 2):
+        for j in range(i + 2, len(objRet), 2):
+            if usl.objectsOverlap(objRet[i][1], objRet[j][1]):
+                return []
+
+    return objRet
+
+
 def changeLight_shadow_inter_only(JSONData, objInfo):
 
     lightNum = 2
@@ -294,6 +370,54 @@ def changeLight_shadow_inter_only(JSONData, objInfo):
     JSONData["light"] = infos
 
 
+def changeLight_shadow_no_overlap(JSONData, objInfo):
+    lightNum = 1
+    infos = []
+
+    ltype = "SUN"
+    bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["light"]
+    bpy.ops.object.light_add(type=ltype)
+    light = bpy.context.selected_objects[0]
+    light.hide_render = False
+    light.hide_viewport = False
+
+    bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["tracked"]
+    bpy.ops.object.add()
+    tracked = bpy.context.selected_objects[0]
+
+    obj = objInfo[0][1]
+    cn = complex(obj.location[0], obj.location[1])
+    radius, deg = cmath.polar(cn)
+    radius = random.uniform(-3, 3)
+    deg = deg + math.pi/2 + random.uniform(-math.pi / 24, math.pi / 24)
+    cn1 = cmath.rect(radius, deg)
+    tracked.location = cn1.real, cn1.imag, 0
+    cn1 = cmath.rect(-radius, deg)
+
+    light.data.energy = random.uniform(3, 8)
+    light.location = cn1.real, cn1.imag, random.uniform(1, 5)
+    light.data.angle = random.uniform(0, math.pi * 5 / 180)
+    light.constraints.clear()
+    light.constraints.new("TRACK_TO")
+    light.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
+    light.constraints[0].up_axis = "UP_Y"
+    light.constraints[0].target = tracked
+
+    info = {}
+    x, y, z = light.location
+    info["location"] = {"x": x, "y": y, "z": z}
+    x, y, z = tracked.location
+    info["track_to"] = {"x": x, "y": y, "z": z}
+    x, y, z = light.scale
+    info["scale"] = {"x": x, "y": y, "z": z}
+    info["energy"] = light.data.energy
+    info["type"] = light.data.type
+    info["light_angle"] = light.data.angle
+
+    infos.append(info)
+
+    JSONData["light"] = infos
+
 def cameraPos_shadow_inter_only(JSONData, objInfo):
     camera = bpy.data.objects['Camera1']
     bpy.context.scene.camera = camera
@@ -310,6 +434,7 @@ def cameraPos_shadow_inter_only(JSONData, objInfo):
     tracked = bpy.context.selected_objects[0]
     tracked.location = random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), 0
 
+    camera.constraints.clear()
     camera.constraints.new("TRACK_TO")
     camera.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
     camera.constraints[0].up_axis = "UP_Y"
@@ -347,6 +472,8 @@ obj_root = pathlib.Path(config['path']['scanned objects'])
 objList = usl.load_obj_paths(current_dir, obj_root)
 
 times = config["indoor"]['output_amount']
+# lightTypes = ["POINT", "SPOT", "AREA", "SUN"]
+lightTypes = config["indoor"]["light types"]
 
 bpy.context.scene.render.filepath = config["path"]['output'] + os.sep + "tmp" + os.sep
 bpy.context.scene.render.resolution_x = config["resolution"]["x"]
@@ -361,12 +488,20 @@ for i in range(times):
     JSONData = {}
     outputUrl1 = outputUrl + os.sep + str(now)
 
+    interOnly = config["indoor"]["shadow intersection dataset only"]
+    noOverlap = config["indoor"]["no shadow overlap"]
+    if interOnly and noOverlap:
+        raise Exception("shadow intersection dataset only and no shadow overlap should not be true at the same time")
+
     while True:
         usl.remove_all_objects_from_collection(bpy.data.collections['items'])
         usl.remove_all_materials()
         # 随机生成3-5个物体
-        if config["indoor"]["shadow intersection dataset only"]:
+
+        if interOnly:
             objInfo = objLayout_shadow_inter_only(objList)
+        elif noOverlap:
+            objInfo = objLayout_shadow_no_overlap(objList)
         else:
             objInfo = usl.random3_5items(objList)
         if len(objInfo) > 0:
@@ -375,26 +510,28 @@ for i in range(times):
     usl.objInfo2JSON(objInfo, JSONData, obj_root)
     # 随机修改ground材质、光源
     change_ground_texture(JSONData)
-    if config["indoor"]["shadow intersection dataset only"]:
-        usl.remove_all_objects_from_collection(bpy.data.collections['light'])
-        usl.remove_all_objects_from_collection(bpy.data.collections['tracked'])
+    usl.remove_all_objects_from_collection(bpy.data.collections['light'])
+    usl.remove_all_objects_from_collection(bpy.data.collections['tracked'])
+    if interOnly:
         changeLight_shadow_inter_only(JSONData, objInfo)
         cameraPos_shadow_inter_only(JSONData, objInfo)
+    elif noOverlap:
+        changeLight_shadow_no_overlap(JSONData, objInfo)
+        usl.randomCamera(JSONData)
     else:
-        usl.remove_all_objects_from_collection(bpy.data.collections['light'])
-        usl.remove_all_objects_from_collection(bpy.data.collections['tracked'])
         changeLight(JSONData, config["indoor"]['light_amount'])
         usl.randomCamera(JSONData)
+
     # 保存文件
-    if(not os.path.exists(outputUrl1)):
+    if not os.path.exists(outputUrl1):
         os.makedirs(outputUrl1)
     if config["indoor"]["save_blend"]:
         bpy.ops.wm.save_as_mainfile(filepath=outputUrl1+os.sep+str(now)+'.blend')
-    with open(outputUrl1+os.sep+str(now)+'data.json', 'w') as f:
-        json.dump(JSONData, f, indent=4)
 
     # 渲染动画
     usl.render_animation()
     HandleResult(outputUrl, outputUrl1)
-    
 
+    usl.getCamMatrix(JSONData)
+    with open(outputUrl1+os.sep+str(now)+'data.json', 'w') as f:
+        json.dump(JSONData, f, indent=4)

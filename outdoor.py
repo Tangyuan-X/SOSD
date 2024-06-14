@@ -121,11 +121,11 @@ for i in range(times):
         os.makedirs(outputUrl1)
     if config["outdoor"]["save_blend"]:
         bpy.ops.wm.save_as_mainfile(filepath=outputUrl1 + os.sep + str(now) + '.blend')
-    with open(outputUrl1+os.sep+str(now)+'data.json', 'w') as f:
-        json.dump(JSONData, f, indent=4)
 
     # 渲染动画
     usl.render_animation()
     HandleResult(outputUrl, outputUrl1)
-    
 
+    usl.getCamMatrix(JSONData)
+    with open(outputUrl1 + os.sep + str(now) + 'data.json', 'w') as f:
+        json.dump(JSONData, f, indent=4)
