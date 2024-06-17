@@ -198,7 +198,8 @@ def objLayout_shadow_inter_only(objList):
     bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["items"]
     objRet = []
 
-    obj_fname = random.choice(list(objList))
+    obj_info = random.choice(list(objList))
+    obj_fname = obj_info[0]
     bpy.ops.import_scene.obj(filepath=str(obj_fname))
     # 选中导入的物体
     obj = bpy.context.selected_objects[0]
@@ -221,7 +222,7 @@ def objLayout_shadow_inter_only(objList):
     rotate = random.uniform(0, 2 * math.pi)
     obj.rotation_euler = 0, 0, rotate
 
-    objRet.append([obj_fname, obj])
+    objRet.append([obj_fname, obj, obj_info[1], obj_info[2]])
 
     # 以下是一模一样的第二个物体
     bpy.ops.import_scene.obj(filepath=str(obj_fname))
@@ -229,13 +230,14 @@ def objLayout_shadow_inter_only(objList):
     obj.location = (randomX, randomY, 0)
     usl.set_obj_scale_to_max_size(obj, max_size=scale_size)
     obj.rotation_euler = 0, 0, rotate
-    objRet.append([obj_fname, obj])
+    objRet.append([obj_fname, obj, obj_info[1], obj_info[2]])
 
     # 设置第二个模型，与第一个模型成一定的夹角，方便构建阴影交叉
     cn = complex(randomX, randomY)
     radius, deg = cmath.polar(cn)
     cn1 = cmath.rect(radius+random.uniform(-0.2, 0.2), deg+random.uniform(math.pi/3, math.pi/2))
-    obj_fname = random.choice(list(objList))
+    obj_info = random.choice(list(objList))
+    obj_fname = obj_info[0]
     bpy.ops.import_scene.obj(filepath=str(obj_fname))
     # 选中导入的物体
     obj = bpy.context.selected_objects[0]
@@ -257,7 +259,7 @@ def objLayout_shadow_inter_only(objList):
     rotate = random.uniform(0, 2 * math.pi)
     obj.rotation_euler = 0, 0, rotate
 
-    objRet.append([obj_fname, obj])
+    objRet.append([obj_fname, obj, obj_info[1], obj_info[2]])
 
     # 以下是一模一样的第二个物体
     bpy.ops.import_scene.obj(filepath=str(obj_fname))
@@ -265,7 +267,7 @@ def objLayout_shadow_inter_only(objList):
     obj.location = (randomX, randomY, 0)
     usl.set_obj_scale_to_max_size(obj, max_size=scale_size)
     obj.rotation_euler = 0, 0, rotate
-    objRet.append([obj_fname, obj])
+    objRet.append([obj_fname, obj, obj_info[1], obj_info[2]])
 
     usl.addRenderFrame(objRet)
 
@@ -289,7 +291,8 @@ def objLayout_shadow_no_overlap(objList):
 
     for i in range(objNum):
         # 随机选取1个obj文件
-        obj_fname = random.choice(list(objList))
+        obj_info = random.choice(list(objList))
+        obj_fname = obj_info[0]
         bpy.ops.import_scene.obj(filepath=str(obj_fname))
         # 选中导入的物体
         obj = bpy.context.selected_objects[0]
@@ -312,7 +315,7 @@ def objLayout_shadow_no_overlap(objList):
         rotate = random.uniform(0, 2 * math.pi)
         obj.rotation_euler = 0, 0, rotate
 
-        objRet.append([obj_fname, obj])
+        objRet.append([obj_fname, obj, obj_info[1], obj_info[2]])
 
         # 以下是一模一样的第二个物体
         bpy.ops.import_scene.obj(filepath=str(obj_fname))
@@ -320,7 +323,7 @@ def objLayout_shadow_no_overlap(objList):
         obj.location = (randomX, randomY, 0)
         usl.set_obj_scale_to_max_size(obj, max_size=scale_size)
         obj.rotation_euler = 0, 0, rotate
-        objRet.append([obj_fname, obj])
+        objRet.append([obj_fname, obj, obj_info[1], obj_info[2]])
 
     usl.addRenderFrame(objRet)
 
@@ -465,10 +468,9 @@ usl.enable_gpus("CUDA")
 # 导入json配置
 with open(current_dir+os.sep+'config.json', 'r') as f:
     config = json.load(f)
-    
-print('Google Scanned Objects dir:', config['path']['scanned objects'])
+
 # obj文件夹路径
-obj_root = pathlib.Path(config['path']['scanned objects'])
+obj_root = config['path']['objects']
 objList = usl.load_obj_paths(current_dir, obj_root)
 
 times = config["indoor"]['output_amount']
@@ -507,7 +509,7 @@ for i in range(times):
         if len(objInfo) > 0:
             break
 
-    usl.objInfo2JSON(objInfo, JSONData, obj_root)
+    usl.objInfo2JSON(objInfo, JSONData, obj_root[0][:-len(obj_root[0].split("\\")[-1])])
     # 随机修改ground材质、光源
     change_ground_texture(JSONData)
     usl.remove_all_objects_from_collection(bpy.data.collections['light'])

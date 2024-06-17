@@ -48,7 +48,7 @@ def handleOneData(data_path, output_path):
                     if r+g+b+a != 0:
                         cnt += 1
             origin.close()
-            if cnt < 100:
+            if cnt < 5000:
                 check = False
                 print("ignore " + data_path, flush=True)
                 break

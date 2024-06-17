@@ -1,6 +1,7 @@
 {
 	"path" : {
-		"scanned objects" : "D:\\Programming\\python\\SOSD\\ScannedObjects",
+		"objects" : ["D:\\Programming\\python\\SOSD\\Objects\\ScannedObjects",
+					 "D:\\Programming\\python\\SOSD\\Objects\\Person"],
 		"ground texture" : "D:\\Programming\\python\\SOSD\\texture_jpgs",
 		"output" : "D:\\Programming\\python\\SOSD\\output",
 		"hdri texture" : "D:\\Programming\\python\\SOSD\\HDRI"

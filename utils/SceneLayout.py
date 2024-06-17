@@ -3,6 +3,7 @@ import os
 import random
 import math
 import cmath
+import pathlib
 
 import bpy
 from mathutils import Vector
@@ -13,7 +14,14 @@ from mathutils.bvhtree import BVHTree
 def load_obj_paths(project_root, obj_root):
     # 缓存obj文件夹路径
     if not os.path.exists(project_root+os.sep+'obj_paths.pkl'):
-        objList = list(obj_root.glob('**/*.obj'))
+        objList = []
+        cnt = 0
+        for obj_path in obj_root:
+            obj_type = obj_path.split("\\")[-1]
+            objs = list(pathlib.Path(obj_path).glob('**/*.obj'))
+            for obj in objs:
+                objList.append([obj, obj_type, cnt]) # 路径，类型，id号
+                cnt += 1
         print(objList)
         with open(project_root+os.sep+'obj_paths.pkl', 'wb') as f:
             pickle.dump(objList, f)
@@ -75,7 +83,8 @@ def random3_5items(objList):
 
     for i in range(objNum):
         # 随机选取1个obj文件
-        obj_fname = random.choice(list(objList))
+        obj_info = random.choice(list(objList))
+        obj_fname = obj_info[0]
         bpy.ops.import_scene.obj(filepath=str(obj_fname))
         # 选中导入的物体
         obj = bpy.context.selected_objects[0]
@@ -97,7 +106,7 @@ def random3_5items(objList):
         rotate = random.uniform(0, 2 * math.pi)
         obj.rotation_euler = 0, 0, rotate
 
-        objRet.append([obj_fname, obj])
+        objRet.append([obj_fname, obj, obj_info[1], obj_info[2]])
 
         # 以下是一模一样的第二个物体
         bpy.ops.import_scene.obj(filepath=str(obj_fname))
@@ -105,7 +114,7 @@ def random3_5items(objList):
         obj.location = (randomX, randomY, 0)
         set_obj_scale_to_max_size(obj, max_size=scale_size)
         obj.rotation_euler = 0, 0, rotate
-        objRet.append([obj_fname, obj])
+        objRet.append([obj_fname, obj, obj_info[1], obj_info[2]])
 
     addRenderFrame(objRet)
 
@@ -235,7 +244,7 @@ def addRenderFrame(objInfo):
         obj.keyframe_insert(data_path="visible_shadow", frame=0)
         obj.keyframe_insert(data_path="is_holdout", frame=0)
     for idx in range(1, len(objInfo), 2):
-        [fname, obj] = objInfo[idx]
+        [fname, obj] = objInfo[idx][:2]
         obj.visible_camera = False
         obj.visible_shadow = False
         obj.pass_index = 0
@@ -248,7 +257,7 @@ def addRenderFrame(objInfo):
         obj.keyframe_insert(data_path="visible_shadow", frame=1)
     # 第2帧所有物体不可见
     for idx in range(0, len(objInfo), 2):
-        [fname, obj] = objInfo[idx]
+        [fname, obj] = objInfo[idx][:2]
         obj.is_shadow_catcher = True
         obj.pass_index = 0
         obj.keyframe_insert(data_path="pass_index", frame=2)
@@ -256,7 +265,7 @@ def addRenderFrame(objInfo):
     # 循环items集合中的所有物体，每隔一秒可见一个物体
     i = 3
     for idx in range(0, len(objInfo), 2):
-        [fname, obj] = objInfo[idx]
+        [fname, obj] = objInfo[idx][:2]
         obj.pass_index = 1
         obj.keyframe_insert(data_path="pass_index", frame=i)
         obj.is_shadow_catcher = False
@@ -271,12 +280,12 @@ def addRenderFrame(objInfo):
         obj.keyframe_insert(data_path="is_holdout", frame=i + 1)
 
         # 渲染自阴影
-        [fname, obj2] = objInfo[idx + 1]
+        [fname, obj2] = objInfo[idx + 1][:2]
         for idx_other in range(0, len(objInfo), 2):
             if idx_other == idx:
                 continue
             # 防止自阴影被其他物体catch
-            [fname, obj_other] = objInfo[idx_other]
+            [fname, obj_other] = objInfo[idx_other][:2]
             obj_other.is_shadow_catcher = False
             obj_other.is_holdout = True
             obj_other.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
@@ -318,7 +327,7 @@ def addRenderFrame(objInfo):
         for idx_other in range(0, len(objInfo), 2):
             if idx_other == idx:
                 continue
-            [fname, obj_other] = objInfo[idx_other]
+            [fname, obj_other] = objInfo[idx_other][:2]
             obj_other.is_shadow_catcher = True
             obj_other.is_holdout = False
             obj_other.keyframe_insert(data_path="is_shadow_catcher", frame=i + 3)
@@ -352,7 +361,7 @@ def objInfo2JSON(objInfo, JSONData, objRoot):
     cnt = 0
     sz = len(objInfo)
     for idx in range(0, sz, 2):
-        fname, obj = objInfo[idx]
+        fname, obj, obj_type, obj_id = objInfo[idx]
         cnt += 1
         singleInfo = {}
         obj_path = str(fname)[len(str(objRoot)):]
@@ -362,6 +371,8 @@ def objInfo2JSON(objInfo, JSONData, objRoot):
         tex_path = obj.active_material.node_tree.nodes[2].image.filepath
         tex_path = tex_path[tex_path.find(obj_path[:7]):]
         singleInfo["texture_path"] = tex_path
+        singleInfo["obj_type"] = obj_type
+        singleInfo["obj_id"] = obj_id
 
         x, y, z = obj.location
         singleInfo["location"] = {"x": x, "y": y, "z": z}

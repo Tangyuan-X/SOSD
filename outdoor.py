@@ -80,10 +80,9 @@ usl.enable_gpus("CUDA")
 # 导入json配置
 with open(current_dir+os.sep+'config.json', 'r') as f:
     config = json.load(f)
-    
-print('Google Scanned Objects dir:', config['path']['scanned objects'])
+
 # obj文件夹路径
-obj_root = pathlib.Path(config['path']['scanned objects'])
+obj_root = config['path']['objects']
 objList = usl.load_obj_paths(current_dir, obj_root)
 
 # 切换当前工作目录到脚本所在的目录
@@ -112,7 +111,7 @@ for i in range(times):
         if len(objInfo) > 0:
             break
 
-    usl.objInfo2JSON(objInfo, JSONData, obj_root)
+    usl.objInfo2JSON(objInfo, JSONData, obj_root[0][:-len(obj_root[0].split("\\")[-1])])
     # 随机修改ground材质、光源
     change_hdri(JSONData)
     usl.randomCamera(JSONData)

@@ -27,6 +27,7 @@ dataset_types = [
     "cross"
 ]
 
+
 def handleOneData(data_name, dataset_path, dtype):
     global image_cnt, annotations_cnt, association_anno_cnt
     global images, annotations, association_anno
@@ -64,6 +65,9 @@ def handleOneData(data_name, dataset_path, dtype):
         annotation_data["category_id"] = 1
         annotation_data["iscrowd"] = 0
         annotation_data["association"] = idx+1
+        annotation_data["obj_type"] = data_json["objects"][idx]["obj_type"]
+        annotation_data["obj_id"] = data_json["objects"][idx]["obj_id"]
+
 
         obj_mask = Image.open(os.path.join(dataset_path, data_name + os.sep + f'IndexObj{idx:04d}.png'))
         annotation_data["width"] = width
@@ -99,6 +103,8 @@ def handleOneData(data_name, dataset_path, dtype):
         annotation_data["category_id"] = 2
         annotation_data["iscrowd"] = 0
         annotation_data["association"] = idx+1
+        annotation_data["obj_type"] = data_json["objects"][idx]["obj_type"]
+        annotation_data["obj_id"] = data_json["objects"][idx]["obj_id"]
 
         shadow_mask = Image.open(os.path.join(dataset_path, data_name + os.sep + f'shadow_mask{idx:04d}.png'))
         annotation_data["width"] = width
@@ -136,6 +142,8 @@ def handleOneData(data_name, dataset_path, dtype):
         association_anno_data["category_id"] = 1
         association_anno_data["iscrowd"] = 0
         association_anno_data["association"] = idx+1
+        annotation_data["obj_type"] = data_json["objects"][idx]["obj_type"]
+        annotation_data["obj_id"] = data_json["objects"][idx]["obj_id"]
 
         association_anno_data["width"] = width
         association_anno_data["height"] = height
