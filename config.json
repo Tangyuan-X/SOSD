@@ -7,7 +7,7 @@
 		"hdri texture" : "D:\\Programming\\python\\SOSD\\HDRI"
 	},
 	"indoor" : {
-		"output_amount" : 3,
+		"output_amount" : 1,
 		"light_amount" : 1,
 		"light types" : ["SUN"],
 		"save_blend" : true,
@@ -16,10 +16,11 @@
 	},
 	"outdoor" : {
 		"output_amount" : 20,
-		"save_blend" : true
+		"save_blend" : true,
+		"no shadow overlap" : true
 	},
 	"resolution" : {
 		"x" : 960,
-		"y" : 540
+		"y" : 512
 	}
 }

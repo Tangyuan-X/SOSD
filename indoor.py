@@ -282,59 +282,6 @@ def objLayout_shadow_inter_only(objList):
     return objRet
 
 
-def objLayout_shadow_no_overlap(objList):
-    bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["items"]
-    objNum = random.randint(3, 5)
-    objRet = []
-
-    deg = random.uniform(0, 2*math.pi)
-
-    for i in range(objNum):
-        # 随机选取1个obj文件
-        obj_info = random.choice(list(objList))
-        obj_fname = obj_info[0]
-        bpy.ops.import_scene.obj(filepath=str(obj_fname))
-        # 选中导入的物体
-        obj = bpy.context.selected_objects[0]
-
-        # 高光归零，防止阴影带有物体材质
-        material = obj.data.materials[0]
-        nodes = material.node_tree.nodes
-        principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
-        principled_bsdf_node.inputs['Specular'].default_value = 0.0
-
-        cn = cmath.rect(random.uniform(-1.5, 1.5), deg+random.uniform(-math.pi/24, math.pi/24))
-        randomX = cn.real
-        randomY = cn.imag
-        # 设置obj坐标
-        obj.location = (randomX, randomY, 0)
-        # 设置物体的缩放
-        scale_size = random.uniform(0.4, 0.8)
-        usl.set_obj_scale_to_max_size(obj, max_size=scale_size)
-        # 随机设置物体的旋转
-        rotate = random.uniform(0, 2 * math.pi)
-        obj.rotation_euler = 0, 0, rotate
-
-        objRet.append([obj_fname, obj, obj_info[1], obj_info[2]])
-
-        # 以下是一模一样的第二个物体
-        bpy.ops.import_scene.obj(filepath=str(obj_fname))
-        obj = bpy.context.selected_objects[0]
-        obj.location = (randomX, randomY, 0)
-        usl.set_obj_scale_to_max_size(obj, max_size=scale_size)
-        obj.rotation_euler = 0, 0, rotate
-        objRet.append([obj_fname, obj, obj_info[1], obj_info[2]])
-
-    usl.addRenderFrame(objRet)
-
-    for i in range(0, len(objRet), 2):
-        for j in range(i + 2, len(objRet), 2):
-            if usl.objectsOverlap(objRet[i][1], objRet[j][1]):
-                return []
-
-    return objRet
-
-
 def changeLight_shadow_inter_only(JSONData, objInfo):
 
     lightNum = 2
@@ -503,13 +450,13 @@ for i in range(times):
         if interOnly:
             objInfo = objLayout_shadow_inter_only(objList)
         elif noOverlap:
-            objInfo = objLayout_shadow_no_overlap(objList)
+            objInfo = usl.objLayout_shadow_no_overlap(objList)
         else:
             objInfo = usl.random3_5items(objList)
         if len(objInfo) > 0:
             break
 
-    usl.objInfo2JSON(objInfo, JSONData, obj_root[0][:-len(obj_root[0].split("\\")[-1])])
+    usl.objInfo2JSON(objInfo, JSONData, obj_root[0][:-len(obj_root[0].split(os.sep)[-1])])
     # 随机修改ground材质、光源
     change_ground_texture(JSONData)
     usl.remove_all_objects_from_collection(bpy.data.collections['light'])
@@ -535,5 +482,6 @@ for i in range(times):
     HandleResult(outputUrl, outputUrl1)
 
     usl.getCamMatrix(JSONData)
+    usl.worldCoord2CamCoord(JSONData)
     with open(outputUrl1+os.sep+str(now)+'data.json', 'w') as f:
         json.dump(JSONData, f, indent=4)

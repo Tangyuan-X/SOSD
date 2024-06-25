@@ -102,19 +102,24 @@ for i in range(times):
     now = int(time.time())
     JSONData = {}
     outputUrl1 = outputUrl + os.sep + str(now)
+    noOverlap = config["outdoor"]["no shadow overlap"]
 
     while True:
         usl.remove_all_objects_from_collection(bpy.data.collections['items'])
         usl.remove_all_materials()
         # 随机生成3-5个物体
-        objInfo = usl.random3_5items(objList)
+        if noOverlap:
+            objInfo = usl.objLayout_shadow_no_overlap(objList)
+        else:
+            objInfo = usl.random3_5items(objList)
         if len(objInfo) > 0:
             break
 
-    usl.objInfo2JSON(objInfo, JSONData, obj_root[0][:-len(obj_root[0].split("\\")[-1])])
+    usl.objInfo2JSON(objInfo, JSONData, obj_root[0][:-len(obj_root[0].split(os.sep)[-1])])
     # 随机修改ground材质、光源
     change_hdri(JSONData)
-    usl.randomCamera(JSONData)
+    usl.randomCamera(JSONData, 5.5, 6.5, 1.0, 3.0)
+
     # 保存文件
     if(not os.path.exists(outputUrl1)):
         os.makedirs(outputUrl1)
@@ -126,5 +131,6 @@ for i in range(times):
     HandleResult(outputUrl, outputUrl1)
 
     usl.getCamMatrix(JSONData)
+    usl.worldCoord2CamCoord(JSONData)
     with open(outputUrl1 + os.sep + str(now) + 'data.json', 'w') as f:
         json.dump(JSONData, f, indent=4)
