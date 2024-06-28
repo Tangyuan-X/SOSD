@@ -479,7 +479,7 @@ for i in range(times):
 
     # 渲染动画
     usl.render_animation()
-    HandleResult(outputUrl, outputUrl1)
+    HandleResult(outputUrl, outputUrl1, JSONData)
 
     usl.getCamMatrix(JSONData)
     usl.worldCoord2CamCoord(JSONData)

@@ -269,10 +269,11 @@ def getCamMatrix(JSONData):
     mat_list = [[ex_mat[0][0], ex_mat[0][1], ex_mat[0][2], ex_mat[0][3]],
                 [ex_mat[1][0], ex_mat[1][1], ex_mat[1][2], ex_mat[1][3]],
                 [ex_mat[2][0], ex_mat[2][1], ex_mat[2][2], ex_mat[2][3]]]
-    K = np.dot(in_mat, np.asarray(mat_list))
-    mat_list = [[K[0][0], K[0][1], K[0][2], K[0][3]],
-                [K[1][0], K[1][1], K[1][2], K[1][3]],
-                [K[2][0], K[2][1], K[2][2], K[2][3]]]
+    # K = np.dot(in_mat, np.asarray(mat_list))
+    K = in_mat
+    mat_list = [[K[0][0], K[0][1], K[0][2], 0],
+                [K[1][0], K[1][1], K[1][2], 0],
+                [K[2][0], K[2][1], K[2][2], 0]]
     JSONData["camera"]["calib"] = mat_list
 
 
@@ -306,7 +307,47 @@ def worldCoord2CamCoord(JSONData):
             "y": float(loc[1]),
             "z": float(loc[2])
         }
-    # TODO: 物体全局方向角
+
+        if "front_dir" in obj:
+            pos2d = np.asarray([float(loc[0]), float(loc[2])])
+            pos2d = pos2d / np.linalg.norm(pos2d)
+            axis_z = np.asarray([0, 1])
+            theta = np.arcsin(np.cross(pos2d, axis_z))
+            if theta > 0.0 and pos2d[1] < 0.0:
+                theta = np.pi - theta
+            elif theta < 0.0 and pos2d[1] < 0.0:
+                theta = -np.pi - theta
+
+            di = np.asarray([float(obj["front_dir"]["x"]), float(obj["front_dir"]["y"]),
+                             float(obj["front_dir"]["z"]), 1.0])
+            di = di.reshape((4, 1))
+            r_mat = cam_mat.copy()
+            r_mat[0][3], r_mat[1][3], r_mat[2][3] = 0.0, 0.0, 0.0
+            di = np.dot(r_mat, di)
+            di /= di[3]
+            di = np.asarray([float(di[0]), float(di[1]), float(di[2])])
+            di /= np.linalg.norm(di)
+
+            obj["front_dir_camcoord"] = {
+                "x": float(di[0]),
+                "y": float(di[1]),
+                "z": float(di[2])
+            }
+
+            di = np.asarray([float(di[0]), float(di[2])])
+            axis_x = np.asarray([1, 0])
+            rotate_z = np.arcsin(np.cross(di, axis_x))
+            if rotate_z > 0.0 and di[0] < 0.0:
+                rotate_z = np.pi - rotate_z
+            elif rotate_z < 0.0 and di[0] < 0.0:
+                rotate_z = -np.pi - rotate_z
+
+            obj["front_angle_camcoord"] = {
+                "theta": float(theta),
+                "rotate_z": float(rotate_z),
+                "alpha": float(rotate_z-theta)
+            }
+
 
     if "track_to" in JSONData["camera"]:
         d = JSONData["camera"]["track_to"].copy()
@@ -423,8 +464,25 @@ def addRenderFrame(objInfo):
             background.is_shadow_catcher = True
             background.keyframe_insert(data_path="is_shadow_catcher", frame=i)
 
+        # 渲染物体的整体的mask
+        for idx_other in range(0, len(objInfo), 2):
+            if idx_other == idx:
+                continue
+            [fname, obj_other] = objInfo[idx_other][:2]
+            obj_other.visible_camera = False
+            obj_other.keyframe_insert(data_path="visible_camera", frame=i)
+
+        # 渲染物体的可见部分的mask
+        for idx_other in range(0, len(objInfo), 2):
+            if idx_other == idx:
+                continue
+            [fname, obj_other] = objInfo[idx_other][:2]
+            obj_other.visible_camera = True
+            obj_other.keyframe_insert(data_path="visible_camera", frame=i+1)
+
+        # 渲染纯阴影
         obj.is_holdout = True
-        obj.keyframe_insert(data_path="is_holdout", frame=i + 1)
+        obj.keyframe_insert(data_path="is_holdout", frame=i + 2)
 
         # 渲染自阴影
         [fname, obj2] = objInfo[idx + 1][:2]
@@ -435,52 +493,52 @@ def addRenderFrame(objInfo):
             [fname, obj_other] = objInfo[idx_other][:2]
             obj_other.is_shadow_catcher = False
             obj_other.is_holdout = True
-            obj_other.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
-            obj_other.keyframe_insert(data_path="is_holdout", frame=i + 2)
+            obj_other.keyframe_insert(data_path="is_shadow_catcher", frame=i + 3)
+            obj_other.keyframe_insert(data_path="is_holdout", frame=i + 3)
         obj.is_shadow_catcher = True
         obj.is_holdout = False
-        obj.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
-        obj.keyframe_insert(data_path="is_holdout", frame=i + 2)
+        obj.keyframe_insert(data_path="is_shadow_catcher", frame=i + 3)
+        obj.keyframe_insert(data_path="is_holdout", frame=i + 3)
         obj2.is_holdout = True
         obj2.visible_diffuse = True
-        obj2.keyframe_insert(data_path="is_holdout", frame=i + 2)
-        obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 2)
+        obj2.keyframe_insert(data_path="is_holdout", frame=i + 3)
+        obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 3)
         for background in bpy.data.collections['Collection'].objects:
             background.is_shadow_catcher = False
             background.visible_camera = False
             background.visible_shadow = False
-            background.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
-            background.keyframe_insert(data_path="visible_camera", frame=i + 2)
-            background.keyframe_insert(data_path="visible_shadow", frame=i + 2)
+            background.keyframe_insert(data_path="is_shadow_catcher", frame=i + 3)
+            background.keyframe_insert(data_path="visible_camera", frame=i + 3)
+            background.keyframe_insert(data_path="visible_shadow", frame=i + 3)
 
         # 设置本次的物体不可见，为下一个物体的渲染扫清障碍
         obj.is_shadow_catcher = True
         obj.visible_shadow = False
         obj.pass_index = 0
-        obj.keyframe_insert(data_path="pass_index", frame=i + 3)
-        obj.keyframe_insert(data_path="is_shadow_catcher", frame=i + 3)
-        obj.keyframe_insert(data_path="visible_shadow", frame=i + 3)
+        obj.keyframe_insert(data_path="pass_index", frame=i + 4)
+        obj.keyframe_insert(data_path="is_shadow_catcher", frame=i + 4)
+        obj.keyframe_insert(data_path="visible_shadow", frame=i + 4)
         for background in bpy.data.collections['Collection'].objects:
             background.visible_camera = True
             background.visible_shadow = False
             if background.name_full == 'sky':
                 background.visible_shadow = False
-            background.keyframe_insert(data_path="visible_camera", frame=i + 3)
-            background.keyframe_insert(data_path="visible_shadow", frame=i + 3)
+            background.keyframe_insert(data_path="visible_camera", frame=i + 4)
+            background.keyframe_insert(data_path="visible_shadow", frame=i + 4)
         obj2.is_holdout = False
         obj2.visible_diffuse = False
-        obj2.keyframe_insert(data_path="is_holdout", frame=i + 3)
-        obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 3)
+        obj2.keyframe_insert(data_path="is_holdout", frame=i + 4)
+        obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 4)
         for idx_other in range(0, len(objInfo), 2):
             if idx_other == idx:
                 continue
             [fname, obj_other] = objInfo[idx_other][:2]
             obj_other.is_shadow_catcher = True
             obj_other.is_holdout = False
-            obj_other.keyframe_insert(data_path="is_shadow_catcher", frame=i + 3)
-            obj_other.keyframe_insert(data_path="is_holdout", frame=i + 3)
+            obj_other.keyframe_insert(data_path="is_shadow_catcher", frame=i + 4)
+            obj_other.keyframe_insert(data_path="is_holdout", frame=i + 4)
 
-        i += 3
+        i += 4
 
     for background in bpy.data.collections['Collection'].objects:
         fcurves = background.animation_data.action.fcurves
@@ -529,6 +587,20 @@ def objInfo2JSON(objInfo, JSONData, objRoot):
         singleInfo["scale"] = {"x": x, "y": y, "z": z}
         x, y, z = obj.dimensions
         singleInfo["dimensions"] = {"x": x, "y": y, "z": z}
+
+        if obj_type == "ScannedObjects" or obj_type == "Person":
+            di = np.dot(np.asarray(obj.matrix_local), np.asarray([-1, 0, 0, 1]))
+            di /= di[3]
+            di = np.asarray([float(di[0]), float(di[1]), float(di[2])])
+            di /= np.linalg.norm(di)
+            singleInfo["front_dir"] = {"x": float(di[0]), "y": float(di[1]), "z": float(di[2])}
+        else:
+            di = np.dot(np.asarray(obj.matrix_local), np.asarray([0, 0, -1, 1]))
+            di /= di[3]
+            di = np.asarray([float(di[0]), float(di[1]), float(di[2])])
+            di /= np.linalg.norm(di)
+            singleInfo["front_dir"] = {"x": float(di[0]), "y": float(di[1]), "z": float(di[2])}
+
         infoList.append(singleInfo)
 
     JSONData["object_count"] = cnt

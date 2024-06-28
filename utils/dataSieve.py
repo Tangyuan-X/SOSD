@@ -1,6 +1,7 @@
 import json
 import os
 from PIL import Image
+import time
 
 
 input_path_root = "D:\\Programming\\python\\SOSD_Linux\\output"
@@ -48,7 +49,7 @@ def handleOneData(data_path, output_path):
                     if r+g+b+a != 0:
                         cnt += 1
             origin.close()
-            if cnt < 5000:
+            if cnt < 500:
                 check = False
                 print("ignore " + data_path, flush=True)
                 break
@@ -61,7 +62,8 @@ def handleOneData(data_path, output_path):
             os.popen("cp " + os.path.join(data_path, file) + " " + os.path.join(output_path, data_name, file))
 
     if not check:
-        os.popen("rm -r " + os.path.join(output_path, data_name))
+        time.sleep(0.5)
+        os.popen("rm -rf " + os.path.join(output_path, data_name))
 
 
 for i in range(len(input_paths)):

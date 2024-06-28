@@ -1,7 +1,8 @@
 from PIL import Image
 import os
 
-def getIndexObj(foreground,index,outputUrl):
+
+def getIndexObj(foreground, index, outputUrl, indexType):
     # 将图像转换为RGBA模式，以便处理透明度通道
     foreground = foreground.convert('RGBA')
 
@@ -40,5 +41,5 @@ def getIndexObj(foreground,index,outputUrl):
                 ret_pixels[i, j] = (0, 0, 0, 0)
 
     # 保存结果
-    ret.save(outputUrl + os.sep +f'IndexObj{index:04d}.png')
+    ret.save(outputUrl + os.sep +f'IndexObj{index:04d}_{indexType}.png')
     return ret
