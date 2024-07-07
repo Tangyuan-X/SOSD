@@ -79,11 +79,11 @@ def objectsOverlap(obj1, obj2):
     return bool(bvh1.overlap(bvh2))
 
 
-# 随机选择3-5个模型，由于生成自阴影的方法需要同一个物体的两个一样的模型，所以数量翻倍
+# 随机选择几个模型，由于生成自阴影的方法需要同一个物体的两个一样的模型，所以数量翻倍
 # objRet中，第n个（从0开始计数）物体的模型下标为2n和2n+1
-def random3_5items(objList):
+def randomItems(objList, minCount=3, maxCount=5):
     bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["items"]
-    objNum = random.randint(3, 5)
+    objNum = random.randint(minCount, maxCount)
     objRet = []
 
     for i in range(objNum):
@@ -131,9 +131,9 @@ def random3_5items(objList):
     return objRet
 
 
-def objLayout_shadow_no_overlap(objList):
+def objLayout_shadow_no_overlap(objList, minCount=3, maxCount=5):
     bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["items"]
-    objNum = random.randint(3, 5)
+    objNum = random.randint(minCount, maxCount)
     objRet = []
 
     deg = random.uniform(0, 2*math.pi)
@@ -152,13 +152,13 @@ def objLayout_shadow_no_overlap(objList):
         principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
         principled_bsdf_node.inputs['Specular'].default_value = 0.0
 
-        cn = cmath.rect(random.uniform(-1.5, 1.5), deg+random.uniform(-math.pi/24, math.pi/24))
+        cn = cmath.rect(random.uniform(-1.1, 1.1), deg+random.uniform(-math.pi/24, math.pi/24))
         randomX = cn.real
         randomY = cn.imag
         # 设置obj坐标
         obj.location = (randomX, randomY, 0)
         # 设置物体的缩放
-        scale_size = random.uniform(0.4, 0.8)
+        scale_size = random.uniform(max(1-0.2*objNum, 0.3), max(1.5-0.2*objNum, 0.5))
         set_obj_scale_to_max_size(obj, max_size=scale_size)
         # 随机设置物体的旋转
         rotate = random.uniform(0, 2 * math.pi)
@@ -177,6 +177,9 @@ def objLayout_shadow_no_overlap(objList):
     addRenderFrame(objRet)
 
     for i in range(0, len(objRet), 2):
+        if objRet[i][1].dimensions[2] < 0.3:
+            # 物体太矮
+            return []
         for j in range(i + 2, len(objRet), 2):
             if objectsOverlap(objRet[i][1], objRet[j][1]):
                 return []
@@ -185,8 +188,7 @@ def objLayout_shadow_no_overlap(objList):
 
 
 # 随机设置相机位置
-def randomCamera(JSONData, cameraMinR=3.5, cameraMaxR=5, cameraMinZ=1, cameraMaxZ=5):
-
+def randomCamera(JSONData, objInfo, cameraMinR=3.5, cameraMaxR=5, cameraMinZ=1, cameraMaxZ=5):
     camera = bpy.data.objects['Camera1']
     bpy.context.scene.camera = camera
 
@@ -197,7 +199,9 @@ def randomCamera(JSONData, cameraMinR=3.5, cameraMaxR=5, cameraMinZ=1, cameraMax
     bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["tracked"]
     bpy.ops.object.add()
     tracked = bpy.context.selected_objects[0]
-    tracked.location = random.uniform(-1, 1), random.uniform(-1, 1), 0
+    # obj1 = random.choice(objInfo)[1]
+    # tracked.location = obj1.location[0]+random.uniform(-0.1, 0.1), obj1.location[1]+random.uniform(-0.1, 0.1), 0
+    tracked.location = random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), 0
 
     camera.constraints.clear()
     camera.constraints.new("TRACK_TO")
@@ -227,55 +231,6 @@ def randomCamera(JSONData, cameraMinR=3.5, cameraMaxR=5, cameraMinZ=1, cameraMax
     JSONData["camera"] = info
 
 
-def getCamMatrix(JSONData):
-    camera = bpy.context.scene.camera
-
-    mat = camera.matrix_world
-    mat_list = [[mat[0][0], mat[0][1], mat[0][2], mat[0][3]],
-                [mat[1][0], mat[1][1], mat[1][2], mat[1][3]],
-                [mat[2][0], mat[2][1], mat[2][2], mat[2][3]],
-                [mat[3][0], mat[3][1], mat[3][2], mat[3][3]]]
-    mat = np.asarray(mat_list)
-    rotate_x = np.array([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
-    mat = np.dot(rotate_x, np.linalg.inv(mat))
-    mat_list = [[mat[0][0], mat[0][1], mat[0][2], mat[0][3]],
-                [mat[1][0], mat[1][1], mat[1][2], mat[1][3]],
-                [mat[2][0], mat[2][1], mat[2][2], mat[2][3]],
-                [mat[3][0], mat[3][1], mat[3][2], mat[3][3]]]
-    JSONData["camera"]["matrix_extrinsic_parameters"] = mat_list
-    ex_mat = mat.copy()
-
-    fl = camera.data.lens
-    pw = camera.data.sensor_width
-    ph = camera.data.sensor_height
-    rx = bpy.context.scene.render.resolution_x
-    ry = bpy.context.scene.render.resolution_y
-
-    pixel_aspect_ratio = bpy.context.scene.render.pixel_aspect_x / bpy.context.scene.render.pixel_aspect_y
-
-    if camera.data.sensor_fit == "VERTICAL":
-        su = pw*pixel_aspect_ratio/rx
-        sv = ph/ry
-    else:
-        su = pw / rx
-        sv = ph / ry / pixel_aspect_ratio
-
-    mat_list = [[fl/su, 0, rx/2],
-                [0, fl/sv, ry/2],
-                [0, 0, 1]]
-    JSONData["camera"]["matrix_intrinsic_parameters"] = mat_list
-    in_mat = np.asarray(mat_list)
-
-    mat_list = [[ex_mat[0][0], ex_mat[0][1], ex_mat[0][2], ex_mat[0][3]],
-                [ex_mat[1][0], ex_mat[1][1], ex_mat[1][2], ex_mat[1][3]],
-                [ex_mat[2][0], ex_mat[2][1], ex_mat[2][2], ex_mat[2][3]]]
-    K = np.dot(in_mat, np.asarray(mat_list))
-    mat_list = [[K[0][0], K[0][1], K[0][2], K[0][3]],
-                [K[1][0], K[1][1], K[1][2], K[1][3]],
-                [K[2][0], K[2][1], K[2][2], K[2][3]]]
-    JSONData["camera"]["calib"] = mat_list
-
-
 def getImgOutputParam(JSONData):
     JSONData["output_param"] = {
         "resolution": {
@@ -288,65 +243,6 @@ def getImgOutputParam(JSONData):
             "y": bpy.context.scene.render.pixel_aspect_y
         }
     }
-
-
-def worldCoord2CamCoord(JSONData):
-    mat_list = JSONData["camera"]["matrix_extrinsic_parameters"]
-    cam_mat = np.asarray(mat_list)
-
-    for obj in JSONData["objects"]:
-        d = obj["location"].copy()
-        mat_list = [d["x"], d["y"], d["z"]]
-        mat_list.append(1.0)
-        loc = np.asarray(mat_list).reshape((4, 1))
-        loc = np.dot(cam_mat, loc)
-        loc /= loc[3]
-        obj["location_camcoord"] = {
-            "x": float(loc[0]),
-            "y": float(loc[1]),
-            "z": float(loc[2])
-        }
-    # TODO: 物体全局方向角
-
-    if "track_to" in JSONData["camera"]:
-        d = JSONData["camera"]["track_to"].copy()
-        mat_list = [d["x"], d["y"], d["z"]]
-        mat_list.append(1.0)
-        loc = np.asarray(mat_list).reshape((4, 1))
-        loc = np.dot(cam_mat, loc)
-        loc /= loc[3]
-        JSONData["camera"]["track_to_camcoord"] = {
-            "x": float(loc[0]),
-            "y": float(loc[1]),
-            "z": float(loc[2])
-        }
-
-    if "light" in JSONData:
-        for lt in JSONData["light"]:
-            d = lt["location"].copy()
-            mat_list = [d["x"], d["y"], d["z"]]
-            mat_list.append(1.0)
-            loc = np.asarray(mat_list).reshape((4, 1))
-            loc = np.dot(cam_mat, loc)
-            loc /= loc[3]
-            lt["location_camcoord"] = {
-                "x": float(loc[0]),
-                "y": float(loc[1]),
-                "z": float(loc[2])
-            }
-
-            if "track_to" in lt:
-                d = lt["track_to"].copy()
-                mat_list = [d["x"], d["y"], d["z"]]
-                mat_list.append(1.0)
-                loc = np.asarray(mat_list).reshape((4, 1))
-                loc = np.dot(cam_mat, loc)
-                loc /= loc[3]
-                lt["track_to_camcoord"] = {
-                    "x": float(loc[0]),
-                    "y": float(loc[1]),
-                    "z": float(loc[2])
-                }
 
 
 # 制作渲染帧，使得可以获得每个物体的阴影

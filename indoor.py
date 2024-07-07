@@ -272,7 +272,7 @@ def objLayout_shadow_inter_only(objList):
     usl.addRenderFrame(objRet)
 
     for i in range(0, len(objRet), 2):
-        if obj.dimensions[2] < 0.3:
+        if objRet[i][1].dimensions[2] < 0.3:
             # 物体太矮则阴影不够长无法交叉
             return []
         for j in range(i + 2, len(objRet), 2):
@@ -338,7 +338,7 @@ def changeLight_shadow_no_overlap(JSONData, objInfo):
     obj = objInfo[0][1]
     cn = complex(obj.location[0], obj.location[1])
     radius, deg = cmath.polar(cn)
-    radius = random.uniform(-3, 3)
+    radius = random.uniform(4, 7) * random.choice([-1, 1])
     deg = deg + math.pi/2 + random.uniform(-math.pi / 24, math.pi / 24)
     cn1 = cmath.rect(radius, deg)
     tracked.location = cn1.real, cn1.imag, 0
@@ -346,7 +346,7 @@ def changeLight_shadow_no_overlap(JSONData, objInfo):
 
     light.data.energy = random.uniform(3, 8)
     light.location = cn1.real, cn1.imag, random.uniform(1, 5)
-    light.data.angle = random.uniform(0, math.pi * 5 / 180)
+    light.data.angle = random.uniform(0, math.pi * 2.5 / 180)
     light.constraints.clear()
     light.constraints.new("TRACK_TO")
     light.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
@@ -367,6 +367,7 @@ def changeLight_shadow_no_overlap(JSONData, objInfo):
     infos.append(info)
 
     JSONData["light"] = infos
+
 
 def cameraPos_shadow_inter_only(JSONData, objInfo):
     camera = bpy.data.objects['Camera1']
@@ -420,9 +421,11 @@ with open(current_dir+os.sep+'config.json', 'r') as f:
 obj_root = config['path']['objects']
 objList = usl.load_obj_paths(current_dir, obj_root)
 
+objCountMin = config['indoor']['obj_count_min']
+objCountMax = config['indoor']['obj_count_max']
+
 times = config["indoor"]['output_amount']
-# lightTypes = ["POINT", "SPOT", "AREA", "SUN"]
-lightTypes = config["indoor"]["light types"]
+lightTypes = config["indoor"]["light_types"]
 
 bpy.context.scene.render.filepath = config["path"]['output'] + os.sep + "tmp" + os.sep
 bpy.context.scene.render.resolution_x = config["resolution"]["x"]
@@ -437,22 +440,21 @@ for i in range(times):
     JSONData = {}
     outputUrl1 = outputUrl + os.sep + str(now)
 
-    interOnly = config["indoor"]["shadow intersection dataset only"]
-    noOverlap = config["indoor"]["no shadow overlap"]
+    interOnly = config["indoor"]["shadow_intersection_dataset_only"]
+    noOverlap = config["indoor"]["no_shadow_overlap"]
     if interOnly and noOverlap:
         raise Exception("shadow intersection dataset only and no shadow overlap should not be true at the same time")
 
     while True:
         usl.remove_all_objects_from_collection(bpy.data.collections['items'])
         usl.remove_all_materials()
-        # 随机生成3-5个物体
 
         if interOnly:
             objInfo = objLayout_shadow_inter_only(objList)
         elif noOverlap:
-            objInfo = usl.objLayout_shadow_no_overlap(objList)
+            objInfo = usl.objLayout_shadow_no_overlap(objList, objCountMin, objCountMax)
         else:
-            objInfo = usl.random3_5items(objList)
+            objInfo = usl.randomItems(objList, objCountMin, objCountMax)
         if len(objInfo) > 0:
             break
 
@@ -466,10 +468,10 @@ for i in range(times):
         cameraPos_shadow_inter_only(JSONData, objInfo)
     elif noOverlap:
         changeLight_shadow_no_overlap(JSONData, objInfo)
-        usl.randomCamera(JSONData)
+        usl.randomCamera(JSONData, objInfo, 0.5+0.5*len(objInfo)*0.5, 1+0.5*len(objInfo)*0.5)
     else:
         changeLight(JSONData, config["indoor"]['light_amount'])
-        usl.randomCamera(JSONData)
+        usl.randomCamera(JSONData, objInfo)
 
     # 保存文件
     if not os.path.exists(outputUrl1):
@@ -481,7 +483,5 @@ for i in range(times):
     usl.render_animation()
     HandleResult(outputUrl, outputUrl1)
 
-    usl.getCamMatrix(JSONData)
-    usl.worldCoord2CamCoord(JSONData)
     with open(outputUrl1+os.sep+str(now)+'data.json', 'w') as f:
         json.dump(JSONData, f, indent=4)

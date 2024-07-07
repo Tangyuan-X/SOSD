@@ -85,6 +85,9 @@ with open(current_dir+os.sep+'config.json', 'r') as f:
 obj_root = config['path']['objects']
 objList = usl.load_obj_paths(current_dir, obj_root)
 
+objCountMin = config['outdoor']['obj_count_min']
+objCountMax = config['outdoor']['obj_count_max']
+
 # 切换当前工作目录到脚本所在的目录
 os.chdir(current_dir)
 
@@ -102,26 +105,29 @@ for i in range(times):
     now = int(time.time())
     JSONData = {}
     outputUrl1 = outputUrl + os.sep + str(now)
-    noOverlap = config["outdoor"]["no shadow overlap"]
+    noOverlap = config["outdoor"]["no_shadow_overlap"]
 
     while True:
         usl.remove_all_objects_from_collection(bpy.data.collections['items'])
         usl.remove_all_materials()
-        # 随机生成3-5个物体
+
         if noOverlap:
-            objInfo = usl.objLayout_shadow_no_overlap(objList)
+            objInfo = usl.objLayout_shadow_no_overlap(objList, objCountMin, objCountMax)
         else:
-            objInfo = usl.random3_5items(objList)
+            objInfo = usl.randomItems(objList, objCountMin, objCountMax)
         if len(objInfo) > 0:
             break
 
     usl.objInfo2JSON(objInfo, JSONData, obj_root[0][:-len(obj_root[0].split(os.sep)[-1])])
     # 随机修改ground材质、光源
     change_hdri(JSONData)
-    usl.randomCamera(JSONData, 5.5, 6.5, 1.0, 3.0)
 
+    if noOverlap:
+        usl.randomCamera(JSONData, objInfo, 1.5+0.5*len(objInfo)*0.5, 2+0.5*len(objInfo)*0.5, 0.1+0.2*len(objInfo)*0.5, 0.3+0.3*len(objInfo)*0.5)
+    else:
+        usl.randomCamera(JSONData, objInfo, 5.5, 6.5, 1.0, 3.0)
     # 保存文件
-    if(not os.path.exists(outputUrl1)):
+    if not os.path.exists(outputUrl1):
         os.makedirs(outputUrl1)
     if config["outdoor"]["save_blend"]:
         bpy.ops.wm.save_as_mainfile(filepath=outputUrl1 + os.sep + str(now) + '.blend')
@@ -130,7 +136,5 @@ for i in range(times):
     usl.render_animation()
     HandleResult(outputUrl, outputUrl1)
 
-    usl.getCamMatrix(JSONData)
-    usl.worldCoord2CamCoord(JSONData)
     with open(outputUrl1 + os.sep + str(now) + 'data.json', 'w') as f:
         json.dump(JSONData, f, indent=4)
