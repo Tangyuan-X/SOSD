@@ -23,7 +23,7 @@ import utils.SceneLayout as usl
 # 修改地面纹理
 def change_ground_texture(JSONData):
     # 设置纹理文件夹路径
-    texture_folder = config['path']['ground texture']
+    texture_folder = config['path']['ground_texture']
     # 获取所有的.jpg文件
     jpg_files = [f for f in os.listdir(texture_folder) if f.lower().endswith('.jpg')]
 
@@ -468,7 +468,7 @@ for i in range(times):
         cameraPos_shadow_inter_only(JSONData, objInfo)
     elif noOverlap:
         changeLight_shadow_no_overlap(JSONData, objInfo)
-        usl.randomCamera(JSONData, objInfo, 0.5+0.5*len(objInfo)*0.5, 1+0.5*len(objInfo)*0.5)
+        usl.randomCamera(JSONData, objInfo, 2.5+0.5*len(objInfo)*0.5, 3.5+0.5*len(objInfo)*0.5, 1, 2.0)
     else:
         changeLight(JSONData, config["indoor"]['light_amount'])
         usl.randomCamera(JSONData, objInfo)

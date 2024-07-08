@@ -21,7 +21,7 @@ import utils.SceneLayout as usl
 # 修改地面纹理
 def change_hdri(JSONData):
     # 设置纹理文件夹路径
-    hdri_folder = config["path"]['hdri texture']
+    hdri_folder = config["path"]['hdri_texture']
     exr_files = [f for f in os.listdir(hdri_folder) if f.lower().endswith('.exr')]
 
     if not exr_files:
@@ -123,7 +123,7 @@ for i in range(times):
     change_hdri(JSONData)
 
     if noOverlap:
-        usl.randomCamera(JSONData, objInfo, 1.5+0.5*len(objInfo)*0.5, 2+0.5*len(objInfo)*0.5, 0.1+0.2*len(objInfo)*0.5, 0.3+0.3*len(objInfo)*0.5)
+        usl.randomCamera(JSONData, objInfo, 2.5+0.5*len(objInfo)*0.5, 3.5+0.5*len(objInfo)*0.5, 0.1+0.2*len(objInfo)*0.5, 0.3+0.3*len(objInfo)*0.5)
     else:
         usl.randomCamera(JSONData, objInfo, 5.5, 6.5, 1.0, 3.0)
     # 保存文件

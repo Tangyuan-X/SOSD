@@ -1,23 +1,22 @@
 {
 	"path" : {
-		"objects" : ["D:\\Programming\\python\\SOSD\\Objects\\ScannedObjects",
-					 "D:\\Programming\\python\\SOSD\\Objects\\Person"],
-		"ground texture" : "D:\\Programming\\python\\SOSD\\texture_jpgs",
+		"objects" : ["D:\\Programming\\python\\SOSD\\Objects\\ScannedObjects", "D:\\Programming\\python\\SOSD\\Objects\\Person"],
+		"ground_texture" : "D:\\Programming\\python\\SOSD\\texture_jpgs",
 		"output" : "D:\\Programming\\python\\SOSD\\output",
-		"hdri texture" : "D:\\Programming\\python\\SOSD\\HDRI"
+		"hdri_texture" : "D:\\Programming\\python\\SOSD\\HDRI"
 	},
 	"indoor" : {
-		"output_amount" : 1,
+		"output_amount" : 5,
 		"light_amount" : 1,
 		"light_types" : ["SUN"],
 		"save_blend" : true,
 		"shadow_intersection_dataset_only" : false,
 		"no_shadow_overlap" : true,
-		"obj_count_min": 1,
+		"obj_count_min": 3,
 		"obj_count_max": 5
 	},
 	"outdoor" : {
-		"output_amount" : 20,
+		"output_amount" : 5,
 		"save_blend" : true,
 		"no_shadow_overlap" : true,
 		"obj_count_min": 1,
