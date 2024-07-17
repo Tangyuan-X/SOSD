@@ -118,12 +118,13 @@ for i in range(times):
         if len(objInfo) > 0:
             break
 
+    usl.adjustObjDataset(objInfo, JSONData)
     usl.objInfo2JSON(objInfo, JSONData, obj_root[0][:-len(obj_root[0].split(os.sep)[-1])])
     # 随机修改ground材质、光源
     change_hdri(JSONData)
 
     if noOverlap:
-        usl.randomCamera(JSONData, objInfo, 2.5+0.5*len(objInfo)*0.5, 3.5+0.5*len(objInfo)*0.5, 0.1+0.2*len(objInfo)*0.5, 0.3+0.3*len(objInfo)*0.5)
+        usl.randomCameraNoOverlap(JSONData, objInfo, 2.5+0.5*len(objInfo)*0.5, 3.5+0.5*len(objInfo)*0.5, 0.1+0.2*len(objInfo)*0.5, 0.3+0.3*len(objInfo)*0.5)
     else:
         usl.randomCamera(JSONData, objInfo, 5.5, 6.5, 1.0, 3.0)
     # 保存文件

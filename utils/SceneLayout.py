@@ -136,7 +136,8 @@ def objLayout_shadow_no_overlap(objList, minCount=3, maxCount=5):
     objNum = random.randint(minCount, maxCount)
     objRet = []
 
-    deg = random.uniform(0, 2*math.pi)
+    # deg = random.uniform(0, 2*math.pi)
+    deg = 0.0
 
     for i in range(objNum):
         # 随机选取1个obj文件
@@ -152,7 +153,7 @@ def objLayout_shadow_no_overlap(objList, minCount=3, maxCount=5):
         principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
         principled_bsdf_node.inputs['Specular'].default_value = 0.0
 
-        cn = cmath.rect(random.uniform(-1.1, 1.1), deg+random.uniform(-math.pi/24, math.pi/24))
+        cn = cmath.rect(random.uniform(-0.5-0.5*objNum, 0.5+0.5*objNum), deg+random.uniform(-math.pi/12, math.pi/12))
         randomX = cn.real
         randomY = cn.imag
         # 设置obj坐标
@@ -194,6 +195,49 @@ def randomCamera(JSONData, objInfo, cameraMinR=3.5, cameraMaxR=5, cameraMinZ=1, 
 
     deg = random.uniform(-math.pi / 2, math.pi / 2)
     cn3 = cmath.rect(random.uniform(cameraMinR, cameraMaxR), deg)
+    camera.location = cn3.real, cn3.imag, random.uniform(cameraMinZ, cameraMaxZ)
+
+    bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["tracked"]
+    bpy.ops.object.add()
+    tracked = bpy.context.selected_objects[0]
+    # obj1 = random.choice(objInfo)[1]
+    # tracked.location = obj1.location[0]+random.uniform(-0.1, 0.1), obj1.location[1]+random.uniform(-0.1, 0.1), 0
+    tracked.location = random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), 0
+
+    camera.constraints.clear()
+    camera.constraints.new("TRACK_TO")
+    camera.constraints[0].track_axis = "TRACK_NEGATIVE_Z"
+    camera.constraints[0].up_axis = "UP_Y"
+    camera.constraints[0].target = tracked
+
+    info = {}
+    x, y, z = camera.location
+    info["location"] = {"x": x, "y": y, "z": z}
+    x, y, z = tracked.location
+    info["track_to"] = {"x": x, "y": y, "z": z}  # track_to的时候，欧拉角不可用
+    x, y, z = camera.rotation_euler
+    info["rotation_euler"] = {"x": x, "y": y, "z": z}
+    x, y, z = camera.scale
+    info["scale"] = {"x": x, "y": y, "z": z}
+
+    info["clip"] = {"start": camera.data.clip_start, "end": camera.data.clip_end}
+    info["lens"] = camera.data.lens
+
+    info["shift"] = {"x": camera.data.shift_x, "y": camera.data.shift_y}
+
+    info["sensor"] = {"fit": camera.data.sensor_fit,
+                      "height": camera.data.sensor_height,
+                      "width": camera.data.sensor_width}
+
+    JSONData["camera"] = info
+
+
+def randomCameraNoOverlap(JSONData, objInfo, cameraMinR=3.5, cameraMaxR=5, cameraMinZ=1, cameraMaxZ=5):
+    camera = bpy.data.objects['Camera1']
+    bpy.context.scene.camera = camera
+
+    deg = random.uniform(math.pi/3, math.pi*2/3)
+    cn3 = cmath.rect(random.uniform(cameraMinR, cameraMaxR)*random.choice([-1, 1]), deg)
     camera.location = cn3.real, cn3.imag, random.uniform(cameraMinZ, cameraMaxZ)
 
     bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["tracked"]
@@ -399,6 +443,22 @@ def render_animation():
     bpy.ops.render.render(animation=True)
 
 
+def adjustObjDataset(objInfo, JSONData):
+    sz = len(objInfo)
+    for idx in range(0, sz):
+        fname, obj, obj_type, obj_id = objInfo[idx]
+        if obj_type in ["car", "motorcycle"]:
+            x, y, z = obj.rotation_euler
+            x = math.pi/2
+            obj.rotation_euler = (x, y, z)
+
+            bpy.ops.object.select_pattern(pattern=obj.name)
+            bpy.ops.object.origin_set(type="ORIGIN_CENTER_OF_MASS")
+            x, y, z = obj.location
+            z = obj.dimensions[1] * 0.4
+            obj.location = (x, y, z)
+
+
 def objInfo2JSON(objInfo, JSONData, objRoot):
     infoList = []
     cnt = 0
@@ -410,12 +470,14 @@ def objInfo2JSON(objInfo, JSONData, objRoot):
         obj_path = str(fname)[len(str(objRoot)):]
         singleInfo["obj_path"] = obj_path
 
-        # TODO: 硬编码nodes序号，可能会有错误，待观察
-        tex_path = obj.active_material.node_tree.nodes[2].image.filepath
-        tex_path = tex_path[tex_path.find(obj_path[:7]):]
-        singleInfo["texture_path"] = tex_path
         singleInfo["obj_type"] = obj_type
         singleInfo["obj_id"] = obj_id
+
+        if obj_type not in ["car", "motorcycle"]:
+            # TODO: 硬编码nodes序号，可能会有错误，待观察
+            tex_path = obj.active_material.node_tree.nodes[2].image.filepath
+            tex_path = tex_path[tex_path.find(obj_path[:7]):]
+            singleInfo["texture_path"] = tex_path
 
         x, y, z = obj.location
         singleInfo["location"] = {"x": x, "y": y, "z": z}

@@ -37,6 +37,9 @@ def handleOneData(data_path, output_path):
     data_name = data_path.split(os.sep)[-1]
     check = True
 
+    if os.path.exists(os.path.join(output_path, data_name)):
+        os.system("rm -r " + os.path.join(output_path, data_name))
+    os.makedirs(os.path.join(output_path, data_name))
     for file in os.listdir(data_path):
         if file.startswith("IndexObj") or file.startswith("shadow_mask"):
             origin = Image.open(os.path.join(data_path, file))
@@ -48,20 +51,20 @@ def handleOneData(data_path, output_path):
                     if r+g+b+a != 0:
                         cnt += 1
             origin.close()
-            if cnt < 5000:
+            if cnt < 1000:
                 check = False
                 print("ignore " + data_path, flush=True)
                 break
             if not os.path.exists(os.path.join(output_path, data_name)):
                 os.makedirs(os.path.join(output_path, data_name))
-            os.popen("cp " + os.path.join(data_path, file) + " " + os.path.join(output_path, data_name, file))
+            os.system("cp " + os.path.join(data_path, file) + " " + os.path.join(output_path, data_name, file))
         else:
             if not os.path.exists(os.path.join(output_path, data_name)):
                 os.makedirs(os.path.join(output_path, data_name))
-            os.popen("cp " + os.path.join(data_path, file) + " " + os.path.join(output_path, data_name, file))
+            os.system("cp " + os.path.join(data_path, file) + " " + os.path.join(output_path, data_name, file))
 
     if not check:
-        os.popen("rm -r " + os.path.join(output_path, data_name))
+        os.system("rm -r " + os.path.join(output_path, data_name))
 
 
 for i in range(len(input_paths)):

@@ -1,6 +1,6 @@
 {
 	"path" : {
-		"objects" : ["D:\\Programming\\python\\SOSD\\Objects\\ScannedObjects", "D:\\Programming\\python\\SOSD\\Objects\\Person"],
+		"objects" : ["D:\\Programming\\python\\SOSD\\Objects\\car", "D:\\Programming\\python\\SOSD\\Objects\\motorcycle"],
 		"ground_texture" : "D:\\Programming\\python\\SOSD\\texture_jpgs",
 		"output" : "D:\\Programming\\python\\SOSD\\output",
 		"hdri_texture" : "D:\\Programming\\python\\SOSD\\HDRI"
@@ -12,8 +12,8 @@
 		"save_blend" : true,
 		"shadow_intersection_dataset_only" : false,
 		"no_shadow_overlap" : true,
-		"obj_count_min": 3,
-		"obj_count_max": 5
+		"obj_count_min": 1,
+		"obj_count_max": 2
 	},
 	"outdoor" : {
 		"output_amount" : 5,
