@@ -95,10 +95,12 @@ def randomItems(objList, minCount=3, maxCount=5):
         obj = bpy.context.selected_objects[0]
 
         # 高光归零，防止阴影带有物体材质
+        # alpha设定为1，防止自阴影跑到别的物体上去
         material = obj.data.materials[0]
         nodes = material.node_tree.nodes
         principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
         principled_bsdf_node.inputs['Specular'].default_value = 0.0
+        principled_bsdf_node.inputs['Alpha'].default_value = 1.0
 
         randomX = random.uniform(-1.5, 1.5)
         randomY = random.uniform(-1.5, 1.5)
@@ -136,8 +138,8 @@ def objLayout_shadow_no_overlap(objList, minCount=3, maxCount=5):
     objNum = random.randint(minCount, maxCount)
     objRet = []
 
-    # deg = random.uniform(0, 2*math.pi)
-    deg = 0.0
+    deg = random.uniform(0, 2*math.pi)
+    # deg = 0.0
 
     for i in range(objNum):
         # 随机选取1个obj文件
@@ -148,12 +150,14 @@ def objLayout_shadow_no_overlap(objList, minCount=3, maxCount=5):
         obj = bpy.context.selected_objects[0]
 
         # 高光归零，防止阴影带有物体材质
-        material = obj.data.materials[0]
-        nodes = material.node_tree.nodes
-        principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
-        principled_bsdf_node.inputs['Specular'].default_value = 0.0
+        # alpha设定为1，防止自阴影跑到别的物体上去
+        for material in obj.data.materials:
+            nodes = material.node_tree.nodes
+            principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
+            principled_bsdf_node.inputs['Specular'].default_value = 0.0
+            principled_bsdf_node.inputs['Alpha'].default_value = 1.0
 
-        cn = cmath.rect(random.uniform(-0.5-0.5*objNum, 0.5+0.5*objNum), deg+random.uniform(-math.pi/12, math.pi/12))
+        cn = cmath.rect(random.uniform(-0.5-0.7*objNum, 0.5+0.7*objNum), deg+random.uniform(-math.pi/6, math.pi/6))
         randomX = cn.real
         randomY = cn.imag
         # 设置obj坐标
@@ -170,6 +174,11 @@ def objLayout_shadow_no_overlap(objList, minCount=3, maxCount=5):
         # 以下是一模一样的第二个物体
         bpy.ops.import_scene.obj(filepath=str(obj_fname))
         obj = bpy.context.selected_objects[0]
+        for material in obj.data.materials:
+            nodes = material.node_tree.nodes
+            principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
+            principled_bsdf_node.inputs['Specular'].default_value = 0.0
+            principled_bsdf_node.inputs['Alpha'].default_value = 1.0
         obj.location = (randomX, randomY, 0)
         set_obj_scale_to_max_size(obj, max_size=scale_size)
         obj.rotation_euler = 0, 0, rotate
@@ -232,20 +241,29 @@ def randomCamera(JSONData, objInfo, cameraMinR=3.5, cameraMaxR=5, cameraMinZ=1, 
     JSONData["camera"] = info
 
 
-def randomCameraNoOverlap(JSONData, objInfo, cameraMinR=3.5, cameraMaxR=5, cameraMinZ=1, cameraMaxZ=5):
+def randomCameraNoOverlap(JSONData, objInfo, cameraMinZ=1, cameraMaxZ=5, cameraMinDeg=0, cameraMaxDeg=2*math.pi):
     camera = bpy.data.objects['Camera1']
     bpy.context.scene.camera = camera
 
-    deg = random.uniform(math.pi/3, math.pi*2/3)
-    cn3 = cmath.rect(random.uniform(cameraMinR, cameraMaxR)*random.choice([-1, 1]), deg)
+    deg = random.uniform(cameraMinDeg, cameraMaxDeg)
+    sz = len(objInfo)//2
+    cameraMinR, cameraMaxR = 1.5+sz*1, 1.5+sz*1.5
+    cn3 = cmath.rect(random.uniform(cameraMinR, cameraMaxR), deg)
     camera.location = cn3.real, cn3.imag, random.uniform(cameraMinZ, cameraMaxZ)
 
     bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children["tracked"]
     bpy.ops.object.add()
     tracked = bpy.context.selected_objects[0]
-    # obj1 = random.choice(objInfo)[1]
-    # tracked.location = obj1.location[0]+random.uniform(-0.1, 0.1), obj1.location[1]+random.uniform(-0.1, 0.1), 0
-    tracked.location = random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), 0
+    obj1 = objInfo[0][1]
+    mindis2 = 1e9
+    for fname, obj, obj_type, obj_id in objInfo:
+        x, y, z = obj.location
+        dis2 = x*x+y*y
+        if dis2>mindis2:
+            mindis2 = dis2
+            obj1 = obj
+    tracked.location = obj1.location[0]+random.uniform(-0.1, 0.1), obj1.location[1]+random.uniform(-0.1, 0.1), 0
+    # tracked.location = random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), 0
 
     camera.constraints.clear()
     camera.constraints.new("TRACK_TO")
@@ -301,6 +319,7 @@ def addRenderFrame(objInfo):
         background.is_shadow_catcher = False
         background.visible_camera = True
         background.visible_shadow = False
+        background.is_holdout = False
         if background.name_full == 'sky':
             background.visible_shadow = False
             background.visible_diffuse = False
@@ -314,6 +333,7 @@ def addRenderFrame(objInfo):
         background.keyframe_insert(data_path="is_shadow_catcher", frame=0)
         background.keyframe_insert(data_path="visible_camera", frame=0)
         background.keyframe_insert(data_path="visible_shadow", frame=0)
+        background.keyframe_insert(data_path="is_holdout", frame=0)
     for obj in bpy.data.collections['items'].objects:
         obj.animation_data_clear()
         obj.visible_camera = True
@@ -387,10 +407,10 @@ def addRenderFrame(objInfo):
         obj2.keyframe_insert(data_path="visible_diffuse", frame=i + 2)
         for background in bpy.data.collections['Collection'].objects:
             background.is_shadow_catcher = False
-            background.visible_camera = False
+            background.is_holdout = True
             background.visible_shadow = False
             background.keyframe_insert(data_path="is_shadow_catcher", frame=i + 2)
-            background.keyframe_insert(data_path="visible_camera", frame=i + 2)
+            background.keyframe_insert(data_path="is_holdout", frame=i + 2)
             background.keyframe_insert(data_path="visible_shadow", frame=i + 2)
 
         # 设置本次的物体不可见，为下一个物体的渲染扫清障碍
@@ -401,12 +421,12 @@ def addRenderFrame(objInfo):
         obj.keyframe_insert(data_path="is_shadow_catcher", frame=i + 3)
         obj.keyframe_insert(data_path="visible_shadow", frame=i + 3)
         for background in bpy.data.collections['Collection'].objects:
-            background.visible_camera = True
             background.visible_shadow = False
+            background.is_holdout = False
             if background.name_full == 'sky':
                 background.visible_shadow = False
-            background.keyframe_insert(data_path="visible_camera", frame=i + 3)
             background.keyframe_insert(data_path="visible_shadow", frame=i + 3)
+            background.keyframe_insert(data_path="is_holdout", frame=i + 3)
         obj2.is_holdout = False
         obj2.visible_diffuse = False
         obj2.keyframe_insert(data_path="is_holdout", frame=i + 3)

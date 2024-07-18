@@ -205,10 +205,11 @@ def objLayout_shadow_inter_only(objList):
     obj = bpy.context.selected_objects[0]
 
     # 高光归零，防止阴影带有物体材质
-    material = obj.data.materials[0]
-    nodes = material.node_tree.nodes
-    principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
-    principled_bsdf_node.inputs['Specular'].default_value = 0.0
+    for material in obj.data.materials:
+        nodes = material.node_tree.nodes
+        principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
+        principled_bsdf_node.inputs['Specular'].default_value = 0.0
+        principled_bsdf_node.inputs['Alpha'].default_value = 1.0
 
     cn = cmath.rect(random.uniform(0.3, 0.8), random.uniform(math.pi*2/3, math.pi) + random.randint(0,1)*math.pi)
     randomX = cn.real
@@ -243,10 +244,11 @@ def objLayout_shadow_inter_only(objList):
     obj = bpy.context.selected_objects[0]
 
     # 高光归零，防止阴影带有物体材质
-    material = obj.data.materials[0]
-    nodes = material.node_tree.nodes
-    principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
-    principled_bsdf_node.inputs['Specular'].default_value = 0.0
+    for material in obj.data.materials:
+        nodes = material.node_tree.nodes
+        principled_bsdf_node = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
+        principled_bsdf_node.inputs['Specular'].default_value = 0.0
+        principled_bsdf_node.inputs['Alpha'].default_value = 1.0
 
     randomX = cn1.real
     randomY = cn1.imag
@@ -469,7 +471,7 @@ for i in range(times):
         cameraPos_shadow_inter_only(JSONData, objInfo)
     elif noOverlap:
         changeLight_shadow_no_overlap(JSONData, objInfo)
-        usl.randomCameraNoOverlap(JSONData, objInfo, 2.5+0.5*len(objInfo)*0.5, 3.5+0.5*len(objInfo)*0.5, 1, 2.0)
+        usl.randomCameraNoOverlap(JSONData, objInfo, 1.0, 2.0, -math.pi/6, math.pi/6)
     else:
         changeLight(JSONData, config["indoor"]['light_amount'])
         usl.randomCamera(JSONData, objInfo)

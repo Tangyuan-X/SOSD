@@ -12,15 +12,15 @@
 		"save_blend" : true,
 		"shadow_intersection_dataset_only" : false,
 		"no_shadow_overlap" : true,
-		"obj_count_min": 1,
-		"obj_count_max": 2
+		"obj_count_min": 3,
+		"obj_count_max": 5
 	},
 	"outdoor" : {
 		"output_amount" : 5,
 		"save_blend" : true,
 		"no_shadow_overlap" : true,
-		"obj_count_min": 1,
-		"obj_count_max": 2
+		"obj_count_min": 3,
+		"obj_count_max": 5
 	},
 	"resolution" : {
 		"x" : 960,

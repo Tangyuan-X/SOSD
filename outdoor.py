@@ -124,7 +124,7 @@ for i in range(times):
     change_hdri(JSONData)
 
     if noOverlap:
-        usl.randomCameraNoOverlap(JSONData, objInfo, 2.5+0.5*len(objInfo)*0.5, 3.5+0.5*len(objInfo)*0.5, 0.1+0.2*len(objInfo)*0.5, 0.3+0.3*len(objInfo)*0.5)
+        usl.randomCameraNoOverlap(JSONData, objInfo, 0.1+0.2*len(objInfo)*0.5, 0.3+0.3*len(objInfo)*0.5)
     else:
         usl.randomCamera(JSONData, objInfo, 5.5, 6.5, 1.0, 3.0)
     # 保存文件
