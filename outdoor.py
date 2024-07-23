@@ -1,4 +1,3 @@
-# 构建合成数据集
 import random
 import os
 import time
@@ -14,128 +13,70 @@ sys.path.append(current_dir)
 sys.path.append(current_dir+os.sep+"utils")
 os.chdir(current_dir)
 
-from utils.BlenderImageAndShadow import HandleResult
-import utils.SceneLayout as usl
+from utils.blender_image_and_shadow import handle_result
+import utils.scene_layout as usl
 
 
-# 修改地面纹理
-def change_hdri(JSONData):
-    # 设置纹理文件夹路径
-    hdri_folder = config["path"]['hdri_texture']
-    exr_files = [f for f in os.listdir(hdri_folder) if f.lower().endswith('.exr')]
+def main():
+    usl.enable_gpus("CUDA")
 
-    if not exr_files:
-        raise Exception("No .exr files found in directory")
+    with open(current_dir+os.sep+'config.json', 'r') as f:
+        config = json.load(f)
 
-    selected_file = random.choice(exr_files)
-    selected_file_path = os.path.join(hdri_folder, selected_file)
-    JSONData["hdri_texture_path"] = str(selected_file)
+    obj_root = config['path']['objects']
+    obj_list = usl.load_obj_paths(current_dir, obj_root)
 
-    # 确保对象存在
-    if "ground" not in bpy.data.objects:
-        raise Exception("Object 'sphere' not found")
+    obj_count_min = config['outdoor']['obj_count_min']
+    obj_count_max = config['outdoor']['obj_count_max']
 
-    if "sky" not in bpy.data.objects:
-        raise Exception("Object 'sky' not found")
+    os.chdir(current_dir)
 
-    # 获取对象
-    ground = bpy.data.objects['ground']
-    sky = bpy.data.objects['sky']
+    times = config["outdoor"]['output_amount']
 
-    # 确保对象有材质
-    if not ground.data.materials:
-        raise Exception("Object 'sphere' has no materials")
-    if not sky.data.materials:
-        raise Exception("Object 'sphere' has no materials")
+    bpy.context.scene.render.filepath = config["path"]['output'] + os.sep + "tmp" + os.sep
+    bpy.context.scene.render.resolution_x = config["resolution"]["x"]
+    bpy.context.scene.render.resolution_y = config["resolution"]["y"]
+    comp_node = bpy.context.scene.node_tree.nodes["file_output123"]
+    comp_node.base_path = config["path"]['output']
+    output_path = config["path"]['output']
 
-    # 只修改第一个材质
-    material = ground.data.materials[0]
-    material.use_nodes = True
-    nodes = material.node_tree.nodes
-    # 获取Principled BSDF节点
-    texture_node = next((node for node in nodes if node.type == 'TEX_IMAGE'), None)
-    if texture_node is None:
-        raise Exception("TEX_IMAGE node not found in material of object 'ground'")
-    texture_node.image = bpy.data.images.load(selected_file_path)
-    print(f"Base color of material '{material.name}' of object 'ground' has been updated with '{selected_file}'")
+    for i in range(times):
+        now = int(time.time())
+        json_data = {}
+        output_path1 = output_path + os.sep + str(now)
+        no_overlap = config["outdoor"]["no_shadow_overlap"]
 
-    material = sky.data.materials[0]
-    material.use_nodes = True
-    nodes = material.node_tree.nodes
-    texture_node = next((node for node in nodes if node.type == 'TEX_IMAGE'), None)
-    if texture_node is None:
-        raise Exception("TEX_IMAGE node not found in material of object 'sky'")
-    texture_node.image = bpy.data.images.load(selected_file_path)
-    print(f"Base color of material '{material.name}' of object 'sky' has been updated with '{selected_file}'")
+        while True:
+            usl.remove_all_objects_from_collection(bpy.data.collections['items'])
+            usl.remove_all_obj_materials()
 
-    nodes = bpy.context.scene.world.node_tree.nodes
-    texture_node = next((node for node in nodes if node.type == 'TEX_ENVIRONMENT'), None)
-    if texture_node is None:
-        raise Exception("TEX_ENVIRONMENT node not found in material of 'world'")
-    texture_node.image = bpy.data.images.load(selected_file_path)
+            if no_overlap:
+                obj_info = usl.obj_layout_shadow_no_overlap(obj_list, obj_count_min, obj_count_max)
+            else:
+                obj_info = usl.random_items(obj_list, obj_count_min, obj_count_max)
+            if len(obj_info) > 0:
+                break
 
+        usl.adjust_obj_dataset(obj_info, json_data)
+        usl.obj_info_to_json(obj_info, json_data, obj_root[0][:-len(obj_root[0].split(os.sep)[-1])])
+        usl.change_hdri(json_data, config)
 
-usl.enable_gpus("CUDA")
-
-# 导入json配置
-with open(current_dir+os.sep+'config.json', 'r') as f:
-    config = json.load(f)
-
-# obj文件夹路径
-obj_root = config['path']['objects']
-objList = usl.load_obj_paths(current_dir, obj_root)
-
-objCountMin = config['outdoor']['obj_count_min']
-objCountMax = config['outdoor']['obj_count_max']
-
-# 切换当前工作目录到脚本所在的目录
-os.chdir(current_dir)
-
-times = config["outdoor"]['output_amount']
-
-bpy.context.scene.render.filepath = config["path"]['output'] + os.sep + "tmp" + os.sep
-bpy.context.scene.render.resolution_x = config["resolution"]["x"]
-bpy.context.scene.render.resolution_y = config["resolution"]["y"]
-comp_node = bpy.context.scene.node_tree.nodes["file_output123"]
-comp_node.base_path = config["path"]['output']
-outputUrl = config["path"]['output']
-
-for i in range(times):
-    # 获得时间戳
-    now = int(time.time())
-    JSONData = {}
-    outputUrl1 = outputUrl + os.sep + str(now)
-    noOverlap = config["outdoor"]["no_shadow_overlap"]
-
-    while True:
-        usl.remove_all_objects_from_collection(bpy.data.collections['items'])
-        usl.remove_all_materials()
-
-        if noOverlap:
-            objInfo = usl.objLayout_shadow_no_overlap(objList, objCountMin, objCountMax)
+        if no_overlap:
+            usl.random_camera_no_overlap(json_data, obj_info, 0.1 + 0.2 * len(obj_info) * 0.5, 0.3 + 0.3 * len(obj_info) * 0.5)
         else:
-            objInfo = usl.randomItems(objList, objCountMin, objCountMax)
-        if len(objInfo) > 0:
-            break
+            usl.random_camera(json_data, obj_info, 5.5, 6.5, 1.0, 3.0)
 
-    usl.adjustObjDataset(objInfo, JSONData)
-    usl.objInfo2JSON(objInfo, JSONData, obj_root[0][:-len(obj_root[0].split(os.sep)[-1])])
-    # 随机修改ground材质、光源
-    change_hdri(JSONData)
+        if not os.path.exists(output_path1):
+            os.makedirs(output_path1)
+        if config["outdoor"]["save_blend"]:
+            bpy.ops.wm.save_as_mainfile(filepath=output_path1 + os.sep + str(now) + '.blend')
 
-    if noOverlap:
-        usl.randomCameraNoOverlap(JSONData, objInfo, 0.1+0.2*len(objInfo)*0.5, 0.3+0.3*len(objInfo)*0.5)
-    else:
-        usl.randomCamera(JSONData, objInfo, 5.5, 6.5, 1.0, 3.0)
-    # 保存文件
-    if not os.path.exists(outputUrl1):
-        os.makedirs(outputUrl1)
-    if config["outdoor"]["save_blend"]:
-        bpy.ops.wm.save_as_mainfile(filepath=outputUrl1 + os.sep + str(now) + '.blend')
+        usl.render_animation()
+        handle_result(output_path, output_path1)
 
-    # 渲染动画
-    usl.render_animation()
-    HandleResult(outputUrl, outputUrl1)
+        with open(output_path1 + os.sep + str(now) + 'data.json', 'w') as f:
+            json.dump(json_data, f, indent=4)
 
-    with open(outputUrl1 + os.sep + str(now) + 'data.json', 'w') as f:
-        json.dump(JSONData, f, indent=4)
+
+if __name__ == '__main__':
+    main()

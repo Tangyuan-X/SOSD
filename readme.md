@@ -1,7 +1,4 @@
 ## How to start
-### edit your config.json
-目前baseUrl和outputUrl必须一致
-
 ### run the following command
 
 室内数据集：
@@ -28,9 +25,4 @@ blender -b ./outdoor.blend -P ./outdoor.py
 - Pillow=10.2.0
 - pycocotools=2.0.7
 - numpy=1.22.0
-
-## TODO
-
-1. 关注阴影先后顺序问题，可能需要使用zbuffer数据
-2. 考虑自阴影问题
-3. 考虑不平整的地面
+- opencv-python=4.5.4.60
