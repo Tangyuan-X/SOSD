@@ -10,7 +10,7 @@
 		"output_amount" : 1,
 		"light_amount" : 1,
 		"light_types" : ["SUN"],
-		"save_blend" : false,
+		"save_blend" : true,
 		"shadow_intersection_dataset_only" : false,
 		"no_shadow_overlap" : true,
 		"obj_count_min": 3,
@@ -18,10 +18,10 @@
 	},
 	"outdoor" : {
 		"output_amount" : 1,
-		"save_blend" : false,
+		"save_blend" : true,
 		"no_shadow_overlap" : true,
-		"obj_count_min": 3,
-		"obj_count_max": 5
+		"obj_count_min": 1,
+		"obj_count_max": 1
 	},
 	"resolution" : {
 		"x" : 960,

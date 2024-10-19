@@ -138,7 +138,6 @@ def handle_one_data(data_name, dataset_path, dtype):
 
         annotations.append(annotation_data)
         shadow_mask.close()
-        # TODO: "light" field in SOBA format is not used
 
     for idx in range(0, object_count):
         association_anno_data = {}
@@ -162,7 +161,6 @@ def handle_one_data(data_name, dataset_path, dtype):
         association_anno_data["bbox"] = mask_util.toBbox(rle_obj).tolist()
         association_anno_data["soft_shadow"] = dtype + '/' + data_name + '/' + f'shadow_soft_mask{idx:04d}.png'
 
-        association_anno.append(association_anno_data)
         bbox1 = mask_util.toBbox(RLEs[idx]).tolist()
         bbox1[2] = bbox1[0]+bbox1[2]
         bbox1[3] = bbox1[1] + bbox1[3]
@@ -174,7 +172,14 @@ def handle_one_data(data_name, dataset_path, dtype):
         annotations[fi+idx]["relation"] = [bbox2[0]/2+bbox2[2]/2, bbox2[1]/2+bbox2[3]/2]
         annotations[fi+idx+object_count]["relation"] = [bbox1[0] / 2 + bbox1[2] / 2, bbox1[1] / 2 + bbox1[3] / 2]
 
-        # TODO: "light" field in SOBA format is not used
+        annotations[fi + idx]["light"] = [bbox1[0] / 2 + bbox1[2] / 2, bbox1[1] / 2 + bbox1[3] / 2,
+                                          bbox1[0] / 2 + bbox1[2] / 2, bbox1[1] / 2 + bbox1[3] / 2]
+        annotations[fi + idx + object_count]["light"] = [bbox2[0]/2+bbox2[2]/2, bbox2[1]/2+bbox2[3]/2,
+                                                         bbox2[0]/2+bbox2[2]/2, bbox2[1]/2+bbox2[3]/2]
+
+        association_anno_data["light"] = [bbox2[0] / 2 + bbox2[2] / 2, bbox2[1] / 2 + bbox2[3] / 2,
+                                          bbox1[0] / 2 + bbox1[2] / 2, bbox1[1] / 2 + bbox1[3] / 2]
+        association_anno.append(association_anno_data)
 
 
 for dataset_path in dataset_paths:
@@ -189,7 +194,8 @@ for dataset_path in dataset_paths:
         "licenses": [
             {
                 "id": 1,
-                "name": "TBD"
+                "name": "Attribution-NonCommercial-ShareAlike License",
+                "url": "http://creativecommons.org/licenses/by-nc-sa/2.0/"
             }
         ],
         "categories": [
