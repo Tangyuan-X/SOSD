@@ -1,3 +1,6 @@
+
+You can download our pre-rendered dataset FSD from [[`Google Drive`](https://drive.google.com/file/d/1KZb-VGQq8f2I1FMs2Xna-SunMXsVKDQi/view?usp=sharing)].
+
 ## How to start
 ### run the following command
 
